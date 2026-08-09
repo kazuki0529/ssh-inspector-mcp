@@ -1,0 +1,13 @@
+{
+  "servers": {
+    "ssh-inspector": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${workspaceFolder}/dist/ssh-inspector.mjs",
+        "--config",
+        "${workspaceFolder}/config.local.json"
+      ]
+    }
+  }
+}
