@@ -2,6 +2,8 @@ import { StdioServerTransport } from "@modelcontextprotocol/server/stdio";
 
 import { loadConfig, resolveConfigPath } from "./config/load.js";
 import { createServer } from "./server.js";
+import { SshClient } from "./ssh/client.js";
+import { SftpInspector } from "./tools/sftp-inspector.js";
 
 /**
  * stdioをMCPプロトコル専用に保ったままサーバーを起動します。
@@ -9,13 +11,21 @@ import { createServer } from "./server.js";
 async function main(): Promise<void> {
   const configPath = resolveConfigPath(process.argv.slice(2));
   const config = await loadConfig(configPath);
-  const server = createServer(config);
+  const sshClient = new SshClient(config);
+  const sftpInspector = new SftpInspector(sshClient, config);
+  const server = createServer(config, { sftpInspector });
   const transport = new StdioServerTransport();
 
   if (config.access.allowAllReadablePaths) {
     // クライアントの承認表示だけでは情報流出を防げないため、危険設定を運用ログへ残します。
     console.error("警告: SSHユーザーが読める全パスへの参照が許可されています。");
   }
+
+  const close = (): void => {
+    sshClient.close();
+  };
+  process.once("SIGINT", close);
+  process.once("SIGTERM", close);
 
   await server.connect(transport);
 }

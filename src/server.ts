@@ -1,15 +1,23 @@
 import { McpServer } from "@modelcontextprotocol/server";
 
 import type { AppConfig } from "./config/schema.js";
+import { registerSftpTools } from "./tools/register-sftp-tools.js";
+import type { SftpInspector } from "./tools/sftp-inspector.js";
+
+/** MCP serverが利用する外部serviceです。 */
+export interface ServerDependencies {
+  sftpInspector: SftpInspector;
+}
 
 /**
  * 検証済み設定だけを受け取り、SSH参照ツールのMCPサーバーを構築します。
  *
  * @param config 起動前に検証された設定
+ * @param dependencies 検証済みpolicyを適用するservice
  * @returns 接続前のMCPサーバー
  */
-export function createServer(config: AppConfig): McpServer {
-  return new McpServer(
+export function createServer(config: AppConfig, dependencies: ServerDependencies): McpServer {
+  const server = new McpServer(
     {
       name: "ssh-inspector-mcp",
       version: "0.1.0",
@@ -22,4 +30,8 @@ export function createServer(config: AppConfig): McpServer {
       ].join("\n"),
     },
   );
+
+  registerSftpTools(server, dependencies.sftpInspector, config);
+
+  return server;
 }
