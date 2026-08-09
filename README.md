@@ -2,7 +2,7 @@
 
 固定した1台のRHEL系hostへSSH接続し、参照操作だけを構造化MCP toolsとして提供するstdio serverです。Kiro、Claude Code/Desktop、VS Codeから同じ単一bundleを利用できます。
 
-raw command、shell、PTY、sudo、port forwarding、agent forwarding、任意environmentは公開しません。file本文、S3 object、DynamoDB itemはread-onlyでも機密情報になり得るため、metadata操作とは別toolに分離し、起動設定のallowlistと上限を必須にしています。
+raw command、shell、PTY、sudo、port forwarding、agent forwarding、任意environmentは公開しません。SSH filesystemは起動設定のpath allowlistで制限し、AWS resourceはSSH先のIAMで認可します。file本文、CloudWatch Logs event、S3 object、DynamoDB itemはread-onlyでも機密情報になり得るため、metadata操作とは別toolに分離して件数・時間・byte上限を適用します。
 
 ## 必要条件
 
@@ -28,7 +28,7 @@ stdioのstdoutはJSON-RPC専用です。警告と起動errorはstderrへ出力�
 
 ## 設定
 
-[examples/config.example.json](examples/config.example.json) を基に、host、user、host key、参照root、AWS resourceを設定します。未知key、相対remote path、host key未指定、参照rootなし、上限外の値は起動時に拒否されます。
+[examples/config.example.json](examples/config.example.json) を基に、host、user、host key、参照root、任意のAWS拡張spec pathを設定します。未知key、相対remote path、host key未指定、参照rootなし、上限外の値は起動時に拒否されます。
 
 host key fingerprintは管理者から別経路で確認してください。初回接続時の値を無条件に信頼しないでください。
 
@@ -56,18 +56,20 @@ private key認証ではlocal key fileを0600以下にします。暗号化keyの
 | SSH/SFTP | `ssh_health_check`, `ssh_list_directory`, `ssh_read_file_head`, `ssh_read_file_tail` |
 | RHEL | `ssh_find_files`, `ssh_search_text`, `ssh_system_info` |
 | CloudWatch | `aws_cloudwatch_describe_alarms`, `aws_cloudwatch_list_metrics`, `aws_cloudwatch_get_metric_data` |
+| CloudWatch Logs metadata | `aws_cloudwatch_logs_describe_log_streams` |
+| CloudWatch Logs data | `aws_cloudwatch_logs_filter_log_events`, `aws_cloudwatch_logs_get_log_events` |
 | S3 metadata | `aws_s3_list_buckets`, `aws_s3_list_objects`, `aws_s3_head_object` |
 | S3 data | `aws_s3_get_object_text` |
 | DynamoDB metadata | `aws_dynamodb_list_tables`, `aws_dynamodb_describe_table` |
 | DynamoDB data | `aws_dynamodb_get_item`, `aws_dynamodb_query` |
 
-S3 data toolは許可prefix内の無圧縮UTF-8 textだけをbyte rangeで取得します。DynamoDB `scan` は標準toolとして公開しません。data toolsのauto-approveは推奨しません。
+AWS resourceとregionの参照可否はSSH先のIAM policyで制御します。S3 data toolはIAMで参照可能な無圧縮UTF-8 textだけをbyte rangeで取得します。CloudWatch Logsは最大24時間・100 events、DynamoDB queryは最大100 itemsに制限し、DynamoDB `scan` は標準toolとして公開しません。data toolsのauto-approveは推奨しません。
 
 ## AWS拡張
 
 [examples/aws-tools.example.json](examples/aws-tools.example.json) のversion 1 specを、設定の `aws.extensionSpecPaths` へ明示指定します。directoryの自動探索はしません。
 
-拡張はread-only operation allowlist、region、timeout、output bytes、型付きparameterを起動時に検証します。S3/DynamoDB resourceはtool入力にできず、固定argsが起動設定allowlist内である必要があります。DynamoDB `scan` は明示specで最大100の必須`limit`を宣言した場合だけ登録できます。
+拡張はread-only operation allowlist、region形式、timeout、output bytes、型付きparameterを起動時に検証します。resource認可は標準toolと同じくIAMへ委ねます。DynamoDB `scan` は明示specで最大100の必須`limit`を宣言した場合だけ登録できます。
 
 ## Client設定
 
@@ -88,7 +90,29 @@ S3 data toolは許可prefix内の無圧縮UTF-8 textだけをbyte rangeで取得
       "command": "node",
       "args": ["/absolute/path/ssh-inspector.mjs", "--config", "/absolute/path/config.json"],
       "disabled": false,
-      "autoApprove": []
+      "autoApprove": [
+        "ssh_health_check",
+        "ssh_list_directory",
+        "ssh_read_file_head",
+        "ssh_read_file_tail",
+        "ssh_find_files",
+        "ssh_search_text",
+        "ssh_system_info",
+        "aws_cloudwatch_describe_alarms",
+        "aws_cloudwatch_list_metrics",
+        "aws_cloudwatch_get_metric_data",
+        "aws_cloudwatch_logs_describe_log_streams",
+        "aws_cloudwatch_logs_filter_log_events",
+        "aws_cloudwatch_logs_get_log_events",
+        "aws_s3_list_buckets",
+        "aws_s3_list_objects",
+        "aws_s3_head_object",
+        "aws_s3_get_object_text",
+        "aws_dynamodb_list_tables",
+        "aws_dynamodb_describe_table",
+        "aws_dynamodb_get_item",
+        "aws_dynamodb_query"
+      ]
     }
   }
 }

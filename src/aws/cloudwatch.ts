@@ -1,6 +1,5 @@
 import { z } from "zod";
 
-import type { AppConfig } from "../config/schema.js";
 import type { RemoteCommandRunner } from "../execution/executor.js";
 import type { RemoteCommand } from "../execution/render-command.js";
 import { buildAwsCommand } from "./build-argv.js";
@@ -98,17 +97,6 @@ export type GetMetricDataInput = z.infer<typeof getMetricDataInputSchema>;
  * CloudWatch入力を固定AWS CLI commandへ変換します。
  */
 export class CloudWatchCommandBuilder {
-  readonly #allowedRegions: ReadonlySet<string>;
-
-  /**
-   * 起動時に検証されたregion allowlistを固定します。
-   *
-   * @param config 検証済み設定
-   */
-  public constructor(config: AppConfig) {
-    this.#allowedRegions = new Set(config.aws.allowedRegions);
-  }
-
   /**
    * alarm metadata参照commandを生成します。
    *
@@ -120,7 +108,6 @@ export class CloudWatchCommandBuilder {
       service: "cloudwatch",
       operation: "describe-alarms",
       region: input.region,
-      allowedRegions: this.#allowedRegions,
       parameters: {
         "alarm-name-prefix": input.alarmNamePrefix,
         "state-value": input.stateValue,
@@ -141,7 +128,6 @@ export class CloudWatchCommandBuilder {
       service: "cloudwatch",
       operation: "list-metrics",
       region: input.region,
-      allowedRegions: this.#allowedRegions,
       parameters: {
         namespace: input.namespace,
         "metric-name": input.metricName,
@@ -171,7 +157,6 @@ export class CloudWatchCommandBuilder {
       service: "cloudwatch",
       operation: "get-metric-data",
       region: input.region,
-      allowedRegions: this.#allowedRegions,
       parameters: {
         "start-time": input.startTime,
         "end-time": input.endTime,
@@ -192,10 +177,10 @@ export class CloudWatchService {
   readonly #builder: CloudWatchCommandBuilder;
 
   /**
-   * runnerとregion policy適用済みbuilderを固定します。
+  * bounded runnerとcommand builderを固定します。
    *
    * @param runner bounded command runner
-   * @param builder policy適用済みbuilder
+  * @param builder bounded command builder
    */
   public constructor(runner: RemoteCommandRunner, builder: CloudWatchCommandBuilder) {
     this.#runner = runner;

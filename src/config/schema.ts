@@ -26,22 +26,6 @@ const passwordAuthenticationSchema = z
   })
   .strict();
 
-const s3AccessRuleSchema = z
-  .object({
-    bucket: z.string().min(3).max(63),
-    prefixes: z.array(z.string().max(1024)).min(1).max(32),
-    allowObjectContent: z.boolean().default(false),
-  })
-  .strict();
-
-const dynamodbAccessRuleSchema = z
-  .object({
-    table: z.string().min(3).max(255),
-    indexes: z.array(z.string().min(1).max(255)).max(32).default([]),
-    allowItemData: z.boolean().default(false),
-  })
-  .strict();
-
 /**
  * MCPサーバーが信頼してよい起動設定を定義します。
  *
@@ -88,9 +72,6 @@ export const appConfigSchema = z
       .prefault({}),
     aws: z
       .object({
-        allowedRegions: z.array(z.string().regex(/^[a-z]{2}(?:-gov)?-[a-z]+-\d$/)).max(32).default([]),
-        s3: z.array(s3AccessRuleSchema).max(128).default([]),
-        dynamodb: z.array(dynamodbAccessRuleSchema).max(128).default([]),
         extensionSpecPaths: z.array(z.string().min(1).max(4096)).max(32).default([]),
       })
       .strict()

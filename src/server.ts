@@ -2,6 +2,8 @@ import { McpServer } from "@modelcontextprotocol/server";
 
 import { registerCloudWatchTools } from "./aws/register-cloudwatch-tools.js";
 import type { CloudWatchService } from "./aws/cloudwatch.js";
+import { registerCloudWatchLogsTools } from "./aws/register-cloudwatch-logs-tools.js";
+import type { CloudWatchLogsService } from "./aws/cloudwatch-logs.js";
 import { registerS3Tools } from "./aws/register-s3-tools.js";
 import type { S3Service } from "./aws/s3.js";
 import { registerDynamoDbTools } from "./aws/register-dynamodb-tools.js";
@@ -19,6 +21,7 @@ export interface ServerDependencies {
   sftpInspector: SftpInspector;
   rhel: RhelToolDependencies;
   cloudWatch: CloudWatchService;
+  cloudWatchLogs: CloudWatchLogsService;
   s3: S3Service;
   dynamodb: DynamoDbService;
   extensionRunner: RemoteCommandRunner;
@@ -29,7 +32,7 @@ export interface ServerDependencies {
  * 検証済み設定だけを受け取り、SSH参照ツールのMCPサーバーを構築します。
  *
  * @param config 起動前に検証された設定
- * @param dependencies 検証済みpolicyを適用するservice
+ * @param dependencies 入力・出力量制約を適用するservice
  * @returns 接続前のMCPサーバー
  */
 export function createServer(config: AppConfig, dependencies: ServerDependencies): McpServer {
@@ -50,9 +53,10 @@ export function createServer(config: AppConfig, dependencies: ServerDependencies
   registerSftpTools(server, dependencies.sftpInspector, config);
   registerRhelTools(server, dependencies.rhel, config);
   registerCloudWatchTools(server, dependencies.cloudWatch);
+  registerCloudWatchLogsTools(server, dependencies.cloudWatchLogs);
   registerS3Tools(server, dependencies.s3);
   registerDynamoDbTools(server, dependencies.dynamodb);
-  registerAwsExtensionTools(server, dependencies.extensionRunner, dependencies.extensionSpecs, config.aws.allowedRegions);
+  registerAwsExtensionTools(server, dependencies.extensionRunner, dependencies.extensionSpecs);
 
   return server;
 }

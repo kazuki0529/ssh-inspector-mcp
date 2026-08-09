@@ -1,45 +1,15 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { appConfigSchema } from "../../src/config/schema.js";
 import type { RemoteCommandRunner } from "../../src/execution/executor.js";
 import {
-  DynamoDbAccessPolicy,
   DynamoDbCommandBuilder,
   DynamoDbService,
   queryInputSchema,
 } from "../../src/aws/dynamodb.js";
 
-const config = appConfigSchema.parse({
-  ssh: {
-    host: "rhel.example.internal",
-    username: "inspector",
-    hostKeySha256: "SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
-    authentication: { method: "privateKey", privateKeyPath: "/tmp/key" },
-  },
-  access: { allowedListRoots: ["/var/log"] },
-  aws: {
-    allowedRegions: ["ap-northeast-1"],
-    dynamodb: [
-      { table: "StatusTable", indexes: ["ByService"], allowItemData: true },
-      { table: "MetadataOnly", indexes: [], allowItemData: false },
-    ],
-  },
-});
-
-describe("DynamoDbAccessPolicy", () => {
-  it("metadata許可、item data許可、index許可を分離する", () => {
-    const policy = new DynamoDbAccessPolicy(config);
-
-    expect(() => policy.assertMetadataAllowed("MetadataOnly")).not.toThrow();
-    expect(() => policy.assertDataAllowed("MetadataOnly")).toThrow(/item data/);
-    expect(() => policy.assertDataAllowed("StatusTable", "UnknownIndex")).toThrow(/index/);
-  });
-});
-
 describe("DynamoDbCommandBuilder", () => {
   it("queryのAttributeValue mapsをJSON argvへ変換する", () => {
-    const policy = new DynamoDbAccessPolicy(config);
-    const builder = new DynamoDbCommandBuilder(config, policy);
+    const builder = new DynamoDbCommandBuilder();
     const input = queryInputSchema.parse({
       region: "ap-northeast-1",
       table: "StatusTable",
@@ -58,8 +28,7 @@ describe("DynamoDbCommandBuilder", () => {
   });
 
   it("AttributeValue内のfile参照を共通policyで拒否する", () => {
-    const policy = new DynamoDbAccessPolicy(config);
-    const builder = new DynamoDbCommandBuilder(config, policy);
+    const builder = new DynamoDbCommandBuilder();
     const input = queryInputSchema.parse({
       region: "ap-northeast-1",
       table: "StatusTable",
@@ -72,8 +41,7 @@ describe("DynamoDbCommandBuilder", () => {
 });
 
 describe("DynamoDbService", () => {
-  it("list-tables結果をallowlistだけへfilterする", async () => {
-    const policy = new DynamoDbAccessPolicy(config);
+  it("list-tables結果をIAMの応答どおり返す", async () => {
     const runner: RemoteCommandRunner = {
       execute: vi.fn(() => Promise.resolve({
         stdout: JSON.stringify({ TableNames: ["StatusTable", "SecretTable"] }),
@@ -83,10 +51,10 @@ describe("DynamoDbService", () => {
         truncated: false,
       })),
     };
-    const service = new DynamoDbService(runner, new DynamoDbCommandBuilder(config, policy), policy);
+    const service = new DynamoDbService(runner, new DynamoDbCommandBuilder());
 
     const response = await service.listTables({ region: "ap-northeast-1", limit: 100 });
 
-    expect(response.result).toEqual({ TableNames: ["StatusTable"] });
+    expect(response.result).toEqual({ TableNames: ["StatusTable", "SecretTable"] });
   });
 });

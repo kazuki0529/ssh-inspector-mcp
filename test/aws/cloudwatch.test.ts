@@ -1,6 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { appConfigSchema } from "../../src/config/schema.js";
 import type { RemoteCommandRunner } from "../../src/execution/executor.js";
 import {
   CloudWatchCommandBuilder,
@@ -8,20 +7,9 @@ import {
 } from "../../src/aws/cloudwatch.js";
 import { AwsExecutionError, executeAwsJson } from "../../src/aws/execute.js";
 
-const config = appConfigSchema.parse({
-  ssh: {
-    host: "rhel.example.internal",
-    username: "inspector",
-    hostKeySha256: "SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
-    authentication: { method: "privateKey", privateKeyPath: "/tmp/key" },
-  },
-  access: { allowedListRoots: ["/var/log"] },
-  aws: { allowedRegions: ["ap-northeast-1"] },
-});
-
 describe("CloudWatchCommandBuilder", () => {
   it("metric data queryをAWS field名のJSONへ変換する", () => {
-    const builder = new CloudWatchCommandBuilder(config);
+    const builder = new CloudWatchCommandBuilder();
     const input = getMetricDataInputSchema.parse({
       region: "ap-northeast-1",
       startTime: "2026-01-01T00:00:00Z",

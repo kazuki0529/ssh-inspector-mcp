@@ -50,91 +50,10 @@ export type HeadObjectInput = z.infer<typeof headObjectInputSchema>;
 /** S3 get object text入力型です。 */
 export type GetObjectTextInput = z.infer<typeof getObjectTextInputSchema>;
 
-interface S3Rule {
-  prefixes: readonly string[];
-  allowObjectContent: boolean;
-}
-
-/**
- * bucket/prefix単位のmetadata・data参照policyを保持します。
- */
-export class S3AccessPolicy {
-  readonly #rules: ReadonlyMap<string, S3Rule>;
-
-  /**
-   * 検証済み設定からimmutableなbucket ruleを構築します。
-   *
-   * @param config 検証済み起動設定
-   */
-  public constructor(config: AppConfig) {
-    this.#rules = new Map(config.aws.s3.map((rule) => [rule.bucket, rule]));
-  }
-
-  /** 設定で公開を許可されたbucket名一覧です。 */
-  public get allowedBuckets(): ReadonlySet<string> {
-    return new Set(this.#rules.keys());
-  }
-
-  /**
-   * metadata参照対象がbucket/prefix allowlist内であることを保証します。
-   *
-   * @param bucket bucket名
-   * @param keyOrPrefix object keyまたはprefix
-   */
-  public assertMetadataAllowed(bucket: string, keyOrPrefix: string): void {
-    const rule = this.#rules.get(bucket);
-    if (!rule || !rule.prefixes.some((prefix) => isWithinS3Prefix(keyOrPrefix, prefix))) {
-      throw new AwsPolicyError("S3 bucket/prefixがallowlistにありません");
-    }
-  }
-
-  /**
-   * 本文取得が明示許可されたbucket/prefix内であることを保証します。
-   *
-   * @param bucket bucket名
-   * @param key object key
-   */
-  public assertContentAllowed(bucket: string, key: string): void {
-    this.assertMetadataAllowed(bucket, key);
-    if (!this.#rules.get(bucket)?.allowObjectContent) {
-      throw new AwsPolicyError("S3 object本文の参照が許可されていません");
-    }
-  }
-}
-
-/**
- * S3 prefix境界を保ち、隣接名への誤許可を防ぎます。
- *
- * @param candidate keyまたは検索prefix
- * @param allowedPrefix 設定済みprefix
- * @returns 許可prefix自身または子孫ならtrue
- */
-export function isWithinS3Prefix(candidate: string, allowedPrefix: string): boolean {
-  if (allowedPrefix === "") {
-    return true;
-  }
-  const normalized = allowedPrefix.endsWith("/") ? allowedPrefix : `${allowedPrefix}/`;
-  return candidate === allowedPrefix || candidate.startsWith(normalized);
-}
-
 /**
  * S3入力を固定AWS CLI commandへ変換します。
  */
 export class S3CommandBuilder {
-  readonly #regions: ReadonlySet<string>;
-  readonly #policy: S3AccessPolicy;
-
-  /**
-   * regionとbucket/prefix policyを固定します。
-   *
-   * @param config 検証済み設定
-   * @param policy bucket/prefix policy
-   */
-  public constructor(config: AppConfig, policy: S3AccessPolicy) {
-    this.#regions = new Set(config.aws.allowedRegions);
-    this.#policy = policy;
-  }
-
   /**
    * bucket metadata一覧commandを生成します。
    *
@@ -146,13 +65,12 @@ export class S3CommandBuilder {
   }
 
   /**
-   * 許可prefix内のobject一覧commandを生成します。
+  * 指定prefix内のobject一覧commandを生成します。
    *
    * @param input list objects入力
    * @returns 固定command
    */
   public listObjects(input: ListObjectsInput): RemoteCommand {
-    this.#policy.assertMetadataAllowed(input.bucket, input.prefix);
     return this.#build("list-objects-v2", input.region, {
       bucket: input.bucket,
       prefix: input.prefix,
@@ -163,13 +81,12 @@ export class S3CommandBuilder {
   }
 
   /**
-   * 許可objectのmetadata参照commandを生成します。
+  * 指定objectのmetadata参照commandを生成します。
    *
    * @param input head object入力
    * @returns 固定command
    */
   public headObject(input: HeadObjectInput): RemoteCommand {
-    this.#policy.assertMetadataAllowed(input.bucket, input.key);
     return this.#build("head-object", input.region, {
       bucket: input.bucket,
       key: input.key,
@@ -185,7 +102,6 @@ export class S3CommandBuilder {
    * @returns 固定command
    */
   public getObject(input: GetObjectTextInput, endByte: number): RemoteCommand {
-    this.#policy.assertContentAllowed(input.bucket, input.key);
     const command = this.#build("get-object", input.region, {
       bucket: input.bucket,
       key: input.key,
@@ -209,7 +125,6 @@ export class S3CommandBuilder {
       service: "s3api",
       operation,
       region,
-      allowedRegions: this.#regions,
       parameters,
     });
   }
@@ -221,7 +136,6 @@ export class S3CommandBuilder {
 export class S3Service {
   readonly #runner: RemoteCommandRunner;
   readonly #builder: S3CommandBuilder;
-  readonly #policy: S3AccessPolicy;
   readonly #maxOutputBytes: number;
 
   /**
@@ -229,38 +143,30 @@ export class S3Service {
    *
    * @param runner bounded runner
    * @param builder S3 builder
-   * @param policy S3 policy
    * @param config 検証済み設定
    */
   public constructor(
     runner: RemoteCommandRunner,
     builder: S3CommandBuilder,
-    policy: S3AccessPolicy,
     config: AppConfig,
   ) {
     this.#runner = runner;
     this.#builder = builder;
-    this.#policy = policy;
     this.#maxOutputBytes = config.limits.maxOutputBytes;
   }
 
   /**
-   * 設定bucketだけに絞った一覧を返します。
+  * IAMが返したbucket一覧を返します。
    *
    * @param input list buckets入力
-   * @returns 許可bucketだけのAWS JSON
+  * @returns AWS JSON
    */
   public async listBuckets(input: ListBucketsInput): Promise<{ result: unknown }> {
-    const raw = await executeAwsJson(this.#runner, this.#builder.listBuckets(input));
-    const parsed = z.object({ Buckets: z.array(z.object({ Name: z.string() }).passthrough()).default([]) }).passthrough().parse(raw);
-
-    return {
-      result: { ...parsed, Buckets: parsed.Buckets.filter((bucket) => this.#policy.allowedBuckets.has(bucket.Name)) },
-    };
+    return { result: await executeAwsJson(this.#runner, this.#builder.listBuckets(input)) };
   }
 
   /**
-   * 許可prefix内のobject metadataを一覧します。
+  * 指定prefix内のobject metadataを一覧します。
    *
    * @param input list objects入力
    * @returns AWS JSON
@@ -270,7 +176,7 @@ export class S3Service {
   }
 
   /**
-   * 許可objectのmetadataを参照します。
+  * 指定objectのmetadataを参照します。
    *
    * @param input head object入力
    * @returns AWS JSON
@@ -286,7 +192,6 @@ export class S3Service {
    * @returns bounded object text
    */
   public async getObjectText(input: GetObjectTextInput): Promise<{ text: string; bytesRead: number; truncated: boolean }> {
-    this.#policy.assertContentAllowed(input.bucket, input.key);
     if (input.maxBytes > this.#maxOutputBytes - 8_192) {
       throw new AwsPolicyError("maxBytesはserver出力上限から8192 bytes差し引いた値以下にしてください");
     }

@@ -24,12 +24,12 @@ export interface BuildAwsCommandInput {
   service: AllowedAwsService;
   operation: string;
   region: string;
-  allowedRegions: ReadonlySet<string>;
   parameters: Readonly<Record<string, AwsParameterValue | undefined>>;
 }
 
 const safeOperationPattern = /^[a-z][a-z0-9-]{0,63}$/;
 const safeParameterPattern = /^[a-z][a-z0-9-]{0,63}$/;
+const awsRegionPattern = /^[a-z]{2}(?:-gov)?-[a-z]+-\d$/;
 const forbiddenParameters = new Set([
   "cli-input-json",
   "cli-input-yaml",
@@ -50,8 +50,8 @@ const forbiddenParameters = new Set([
  * @returns `/usr/bin/aws` 固定command
  */
 export function buildAwsCommand(input: BuildAwsCommandInput): RemoteCommand {
-  if (!input.allowedRegions.has(input.region)) {
-    throw new AwsPolicyError("AWS regionがallowlistにありません");
+  if (!awsRegionPattern.test(input.region)) {
+    throw new AwsPolicyError("AWS region形式が不正です");
   }
   if (!safeOperationPattern.test(input.operation)) {
     throw new AwsPolicyError("AWS operation名が不正です");

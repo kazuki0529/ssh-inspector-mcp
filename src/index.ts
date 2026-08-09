@@ -1,8 +1,12 @@
 import { StdioServerTransport } from "@modelcontextprotocol/server/stdio";
 
 import { CloudWatchCommandBuilder, CloudWatchService } from "./aws/cloudwatch.js";
-import { S3AccessPolicy, S3CommandBuilder, S3Service } from "./aws/s3.js";
-import { DynamoDbAccessPolicy, DynamoDbCommandBuilder, DynamoDbService } from "./aws/dynamodb.js";
+import {
+  CloudWatchLogsCommandBuilder,
+  CloudWatchLogsService,
+} from "./aws/cloudwatch-logs.js";
+import { S3CommandBuilder, S3Service } from "./aws/s3.js";
+import { DynamoDbCommandBuilder, DynamoDbService } from "./aws/dynamodb.js";
 import { loadAwsToolSpecs } from "./aws/load-specs.js";
 import { loadConfig, resolveConfigPath } from "./config/load.js";
 import { createServer } from "./server.js";
@@ -21,8 +25,6 @@ async function main(): Promise<void> {
   const extensionSpecs = await loadAwsToolSpecs(config);
   const sshClient = new SshClient(config);
   const sftpInspector = new SftpInspector(sshClient, config);
-  const s3Policy = new S3AccessPolicy(config);
-  const dynamodbPolicy = new DynamoDbAccessPolicy(config);
   const server = createServer(config, {
     sftpInspector,
     rhel: {
@@ -30,9 +32,13 @@ async function main(): Promise<void> {
       searchText: new SearchTextService(sshClient, sshClient, config),
       systemInfo: new SystemInfoService(sshClient, config),
     },
-    cloudWatch: new CloudWatchService(sshClient, new CloudWatchCommandBuilder(config)),
-    s3: new S3Service(sshClient, new S3CommandBuilder(config, s3Policy), s3Policy, config),
-    dynamodb: new DynamoDbService(sshClient, new DynamoDbCommandBuilder(config, dynamodbPolicy), dynamodbPolicy),
+    cloudWatch: new CloudWatchService(sshClient, new CloudWatchCommandBuilder()),
+    cloudWatchLogs: new CloudWatchLogsService(
+      sshClient,
+      new CloudWatchLogsCommandBuilder(),
+    ),
+    s3: new S3Service(sshClient, new S3CommandBuilder(), config),
+    dynamodb: new DynamoDbService(sshClient, new DynamoDbCommandBuilder()),
     extensionRunner: sshClient,
     extensionSpecs,
   });

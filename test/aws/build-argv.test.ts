@@ -5,15 +5,12 @@ import {
   buildAwsCommand,
 } from "../../src/aws/build-argv.js";
 
-const allowedRegions = new Set(["ap-northeast-1"]);
-
 describe("buildAwsCommand", () => {
   it("共通安全optionとsort済みparameterを強制する", () => {
     const command = buildAwsCommand({
       service: "cloudwatch",
       operation: "list-metrics",
       region: "ap-northeast-1",
-      allowedRegions,
       parameters: {
         namespace: "AWS/EC2",
         "max-items": 25,
@@ -40,22 +37,20 @@ describe("buildAwsCommand", () => {
     });
   });
 
-  it("allowlist外regionと危険optionを拒否する", () => {
+  it("不正なregion形式と危険optionを拒否する", () => {
     expect(() =>
       buildAwsCommand({
         service: "cloudwatch",
         operation: "list-metrics",
-        region: "us-east-1",
-        allowedRegions,
+        region: "not-a-region",
         parameters: {},
       }),
-    ).toThrow(/allowlist/);
+    ).toThrow(/region形式/);
     expect(() =>
       buildAwsCommand({
         service: "cloudwatch",
         operation: "list-metrics",
         region: "ap-northeast-1",
-        allowedRegions,
         parameters: { "endpoint-url": "https://attacker.example" },
       }),
     ).toThrow(AwsPolicyError);
@@ -67,7 +62,6 @@ describe("buildAwsCommand", () => {
         service: "cloudwatch",
         operation: "get-metric-data",
         region: "ap-northeast-1",
-        allowedRegions,
         parameters: {
           "metric-data-queries": [{ Id: "m1", Expression: "file:///etc/shadow" }],
         },

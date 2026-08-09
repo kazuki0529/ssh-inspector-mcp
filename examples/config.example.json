@@ -15,21 +15,6 @@
     "allowedSystemdUnits": ["application.service"]
   },
   "aws": {
-    "allowedRegions": ["ap-northeast-1"],
-    "extensionSpecPaths": [],
-    "s3": [
-      {
-        "bucket": "example-observability",
-        "prefixes": ["logs/"],
-        "allowObjectContent": false
-      }
-    ],
-    "dynamodb": [
-      {
-        "table": "example-status",
-        "indexes": [],
-        "allowItemData": false
-      }
-    ]
+    "extensionSpecPaths": []
   }
 }

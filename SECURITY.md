@@ -2,7 +2,7 @@
 
 ## Security boundary
 
-このserverは、MCP clientから任意commandを実行できないこと、起動時に固定したSSH host/userとallowlistの外を参照できないこと、出力・時間・同時実行数を制限することをboundaryとします。
+このserverは、MCP clientから任意commandを実行できないこと、起動時に固定したSSH host/userとSSH path allowlistの外を参照できないこと、AWS操作を固定read-only operationへ限定すること、出力・時間・同時実行数を制限することをboundaryとします。AWS resourceの認可境界はSSH先のIAMです。
 
 read-onlyは機密性を保証しません。file名、log本文、process情報、S3 object、DynamoDB item、CloudWatch dimensionsは機密情報を含み得ます。MCP client、model provider、conversation logへ渡る情報として扱ってください。
 
@@ -20,12 +20,11 @@ read-onlyは機密性を保証しません。file名、log本文、process情報
 1. 専用SSH userを使い、OS permissionで参照範囲を絞る。
 2. SSH host keyをSHA-256 fingerprintでpin留めする。
 3. `allowedListRoots` と `allowedReadRoots` を用途別に最小化する。
-4. S3 bucket/prefix、DynamoDB table/indexとdata flagを最小化する。
-5. SSH先のAWS credentialへread-only IAM policyとresource制約を適用する。
-6. data toolsをauto-approveせず、毎回resourceとrange/queryを確認する。
-7. MCP clientとserver stderr/audit logの閲覧権限・保存期間を制限する。
+4. SSH先のAWS credentialへread-only IAM policyとregion/resource制約を適用する。
+5. CloudWatch Logs、S3、DynamoDBのdata toolsをauto-approveせず、毎回resourceと範囲を確認する。
+6. MCP clientとserver stderr/audit logの閲覧権限・保存期間を制限する。
 
-tool schemaやbuilderのallowlistはIAMの代替ではありません。AWS側の認可を最終防衛線にしてください。
+tool schemaとbuilderは操作種別と情報量を制限しますが、AWS resource認可は行いません。IAMを最小権限で構成してください。
 
 ## Secret handling
 
@@ -43,6 +42,6 @@ fingerprint不一致時は接続を継続しないでください。serverを停
 2. SSH key/password、AWS credential、影響したhost accountを無効化またはrotationする。
 3. MCP conversation、client log、stderr/audit、SSH auth log、CloudTrailをoperation時刻とresourceで照合する。
 4. 露出したfile root、S3 prefix、DynamoDB table/itemの機密度と外部送信先を確認する。
-5. allowlist、OS permission、IAM、auto-approve設定を修正してから再開する。
+5. SSH path allowlist、OS permission、IAM、auto-approve設定を修正してから再開する。
 
 脆弱性報告には再現条件、影響するtool、設定の非秘密部分、期待動作を含め、credentialや実dataは添付しないでください。

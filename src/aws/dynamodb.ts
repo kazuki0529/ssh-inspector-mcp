@@ -1,14 +1,11 @@
 import { z } from "zod";
 
-import type { AppConfig } from "../config/schema.js";
 import type { RemoteCommandRunner } from "../execution/executor.js";
 import type { RemoteCommand } from "../execution/render-command.js";
-import { AwsPolicyError, buildAwsCommand } from "./build-argv.js";
+import { buildAwsCommand } from "./build-argv.js";
 import { executeAwsJson } from "./execute.js";
 
 const tableNameSchema = z.string().regex(/^[A-Za-z0-9_.-]{3,255}$/);
-const tokenSchema = z.string().min(1).max(4096).optional();
-
 const attributeValueSchema: z.ZodType<unknown> = z.lazy(() => z.union([
   z.object({ S: z.string().max(16_384) }).strict(),
   z.object({ N: z.string().regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[Ee][+-]?\d+)?$/).max(128) }).strict(),
@@ -70,77 +67,10 @@ export type GetItemInput = z.infer<typeof getItemInputSchema>;
 /** query入力型です。 */
 export type QueryInput = z.infer<typeof queryInputSchema>;
 
-interface TableRule {
-  indexes: readonly string[];
-  allowItemData: boolean;
-}
-
-/**
- * DynamoDB table/indexとitem dataのallowlistを強制します。
- */
-export class DynamoDbAccessPolicy {
-  readonly #tables: ReadonlyMap<string, TableRule>;
-
-  /**
-   * 検証済みtable ruleを固定します。
-   *
-   * @param config 検証済み設定
-   */
-  public constructor(config: AppConfig) {
-    this.#tables = new Map(config.aws.dynamodb.map((rule) => [rule.table, rule]));
-  }
-
-  /** 許可table名一覧です。 */
-  public get allowedTables(): ReadonlySet<string> {
-    return new Set(this.#tables.keys());
-  }
-
-  /**
-   * table metadata参照可否を検査します。
-   *
-   * @param table table名
-   */
-  public assertMetadataAllowed(table: string): void {
-    if (!this.#tables.has(table)) {
-      throw new AwsPolicyError("DynamoDB tableがallowlistにありません");
-    }
-  }
-
-  /**
-   * item dataとindexの参照可否を検査します。
-   *
-   * @param table table名
-   * @param index 任意index名
-   */
-  public assertDataAllowed(table: string, index?: string): void {
-    const rule = this.#tables.get(table);
-    if (!rule?.allowItemData) {
-      throw new AwsPolicyError("DynamoDB item dataの参照が許可されていません");
-    }
-    if (index !== undefined && !rule.indexes.includes(index)) {
-      throw new AwsPolicyError("DynamoDB indexがallowlistにありません");
-    }
-  }
-}
-
 /**
  * DynamoDB入力を固定AWS CLI commandへ変換します。
  */
 export class DynamoDbCommandBuilder {
-  readonly #regions: ReadonlySet<string>;
-  readonly #policy: DynamoDbAccessPolicy;
-
-  /**
-   * regionとtable/index policyを固定します。
-   *
-   * @param config 検証済み設定
-   * @param policy table/index policy
-   */
-  public constructor(config: AppConfig, policy: DynamoDbAccessPolicy) {
-    this.#regions = new Set(config.aws.allowedRegions);
-    this.#policy = policy;
-  }
-
   /**
    * table一覧commandを生成します。
    *
@@ -158,7 +88,6 @@ export class DynamoDbCommandBuilder {
    * @returns 固定command
    */
   public describeTable(input: DescribeTableInput): RemoteCommand {
-    this.#policy.assertMetadataAllowed(input.table);
     return this.#build("describe-table", input.region, { "table-name": input.table });
   }
 
@@ -169,7 +98,6 @@ export class DynamoDbCommandBuilder {
    * @returns 固定command
    */
   public getItem(input: GetItemInput): RemoteCommand {
-    this.#policy.assertDataAllowed(input.table);
     return this.#build("get-item", input.region, {
       "table-name": input.table,
       key: input.key,
@@ -186,7 +114,6 @@ export class DynamoDbCommandBuilder {
    * @returns 固定command
    */
   public query(input: QueryInput): RemoteCommand {
-    this.#policy.assertDataAllowed(input.table, input.index);
     return this.#build("query", input.region, {
       "table-name": input.table,
       "index-name": input.index,
@@ -210,7 +137,7 @@ export class DynamoDbCommandBuilder {
    * @returns 固定command
    */
   #build(operation: string, region: string, parameters: Parameters<typeof buildAwsCommand>[0]["parameters"]): RemoteCommand {
-    return buildAwsCommand({ service: "dynamodb", operation, region, allowedRegions: this.#regions, parameters });
+    return buildAwsCommand({ service: "dynamodb", operation, region, parameters });
   }
 }
 
@@ -220,31 +147,26 @@ export class DynamoDbCommandBuilder {
 export class DynamoDbService {
   readonly #runner: RemoteCommandRunner;
   readonly #builder: DynamoDbCommandBuilder;
-  readonly #policy: DynamoDbAccessPolicy;
 
   /**
    * DynamoDB実行依存を固定します。
    *
    * @param runner bounded runner
-   * @param builder policy適用済みbuilder
-   * @param policy table policy
+  * @param builder bounded command builder
    */
-  public constructor(runner: RemoteCommandRunner, builder: DynamoDbCommandBuilder, policy: DynamoDbAccessPolicy) {
+  public constructor(runner: RemoteCommandRunner, builder: DynamoDbCommandBuilder) {
     this.#runner = runner;
     this.#builder = builder;
-    this.#policy = policy;
   }
 
   /**
-   * 許可tableだけの一覧を返します。
+  * IAMが返したtable一覧を返します。
    *
    * @param input list tables入力
-   * @returns 許可tableだけの一覧
+  * @returns AWS JSON
    */
   public async listTables(input: ListTablesInput): Promise<{ result: unknown }> {
-    const raw = await executeAwsJson(this.#runner, this.#builder.listTables(input));
-    const parsed = z.object({ TableNames: z.array(z.string()).default([]), LastEvaluatedTableName: tokenSchema }).passthrough().parse(raw);
-    return { result: { ...parsed, TableNames: parsed.TableNames.filter((table) => this.#policy.allowedTables.has(table)) } };
+    return { result: await executeAwsJson(this.#runner, this.#builder.listTables(input)) };
   }
 
   /**
@@ -268,7 +190,7 @@ export class DynamoDbService {
   }
 
   /**
-   * tableまたは許可indexをqueryします。
+  * tableまたはindexをqueryします。
    *
    * @param input query入力
    * @returns AWS JSON

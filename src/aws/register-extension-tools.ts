@@ -13,16 +13,12 @@ import type { AwsToolSpec } from "./spec-schema.js";
  * @param server 登録先MCP server
  * @param runner bounded command runner
  * @param specs 起動時に検証済みのimmutable spec
- * @param allowedRegions region allowlist
  */
 export function registerAwsExtensionTools(
   server: McpServer,
   runner: RemoteCommandRunner,
   specs: readonly AwsToolSpec[],
-  allowedRegions: readonly string[],
 ): void {
-  const regions = new Set(allowedRegions);
-
   for (const spec of specs) {
     const inputSchema = createInputSchema(spec);
     server.registerTool(
@@ -37,7 +33,6 @@ export function registerAwsExtensionTools(
           service: spec.service,
           operation: spec.operation,
           region: spec.region,
-          allowedRegions: regions,
           parameters,
         });
         const result = await executeAwsJson(runner, command, {

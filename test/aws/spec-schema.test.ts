@@ -64,13 +64,13 @@ describe("loadAwsToolSpecs", () => {
       },
       access: { allowedListRoots: ["/var/log"] },
       limits: { operationTimeoutMs: 5_000, maxOutputBytes: 32_768 },
-      aws: { allowedRegions: ["ap-northeast-1"], extensionSpecPaths: [specPath] },
+      aws: { extensionSpecPaths: [specPath] },
     });
 
     await expect(loadAwsToolSpecs(config)).rejects.toThrow(/server上限/);
   });
 
-  it("S3 resourceを入力parameterにするspecを拒否する", async () => {
+  it("S3 resourceを入力parameterにするspecをIAM認可前提で受理する", async () => {
     const directory = await mkdtemp(join(tmpdir(), "ssh-inspector-spec-"));
     const specPath = join(directory, "tools.json");
     const s3Tool = {
@@ -90,13 +90,9 @@ describe("loadAwsToolSpecs", () => {
         authentication: { method: "privateKey", privateKeyPath: "/tmp/key" },
       },
       access: { allowedListRoots: ["/var/log"] },
-      aws: {
-        allowedRegions: ["ap-northeast-1"],
-        extensionSpecPaths: [specPath],
-        s3: [{ bucket: "allowed-bucket", prefixes: ["logs/"] }],
-      },
+      aws: { extensionSpecPaths: [specPath] },
     });
 
-    await expect(loadAwsToolSpecs(config)).rejects.toThrow(/resourceを入力parameter/);
+    await expect(loadAwsToolSpecs(config)).resolves.toHaveLength(1);
   });
 });

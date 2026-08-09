@@ -51,9 +51,9 @@ PATHやshell aliasには依存しません。package更新でpathやCLI behavior
 
 ## AWS credential
 
-instance profileなど短命credentialを優先し、SSH userのhomeへ長期access keyを保存しません。CloudTrailを有効化し、IAM policyではactionだけでなくregion、bucket/prefix、table ARN、index ARNを制限します。
+instance profileなど短命credentialを優先し、SSH userのhomeへ長期access keyを保存しません。CloudTrailを有効化し、IAM policyではactionだけでなくregion、CloudWatch Logs log group、bucket/prefix、table ARN、index ARNを制限します。AWS resourceの参照可否はserver設定ではなく、このIAM policyだけで認可されます。
 
-S3 object本文とDynamoDB itemを許可しない環境では、設定の`allowObjectContent`と`allowItemData`をfalseのままにします。CLI policyを迂回されてもwriteできないよう、IAM policyにwrite actionを含めません。
+CloudWatch Logs event、S3 object本文、DynamoDB itemを許可しない環境では、対応するread actionをIAM policyへ含めません。CLI policyを迂回されてもwriteできないよう、write actionも含めません。
 
 ## Audit
 
