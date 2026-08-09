@@ -1,5 +1,6 @@
 import { StdioServerTransport } from "@modelcontextprotocol/server/stdio";
 
+import { CloudWatchCommandBuilder, CloudWatchService } from "./aws/cloudwatch.js";
 import { loadConfig, resolveConfigPath } from "./config/load.js";
 import { createServer } from "./server.js";
 import { SshClient } from "./ssh/client.js";
@@ -23,6 +24,7 @@ async function main(): Promise<void> {
       searchText: new SearchTextService(sshClient, sshClient, config),
       systemInfo: new SystemInfoService(sshClient, config),
     },
+    cloudWatch: new CloudWatchService(sshClient, new CloudWatchCommandBuilder(config)),
   });
   const transport = new StdioServerTransport();
 
