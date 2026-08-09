@@ -1,4 +1,5 @@
 import type {
+  CommandExecutionOptions,
   CommandExecutionResult,
   RemoteCommandRunner,
 } from "../execution/executor.js";
@@ -28,8 +29,9 @@ export class AwsExecutionError extends Error {
 export async function executeAwsJson(
   runner: RemoteCommandRunner,
   command: RemoteCommand,
+  options?: CommandExecutionOptions,
 ): Promise<unknown> {
-  const result = await runner.execute(command);
+  const result = await runner.execute(command, options);
   assertSuccessfulResult(result);
 
   try {

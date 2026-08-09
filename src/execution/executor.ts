@@ -11,9 +11,15 @@ export interface CommandExecutionResult {
   truncated: boolean;
 }
 
+/** operation単位でglobal上限を狭める実行optionです。 */
+export interface CommandExecutionOptions {
+  timeoutMs?: number;
+  maxOutputBytes?: number;
+}
+
 /** 固定builderが生成したcommandだけを実行する境界です。 */
 export interface RemoteCommandRunner {
-  execute(command: RemoteCommand): Promise<CommandExecutionResult>;
+  execute(command: RemoteCommand, options?: CommandExecutionOptions): Promise<CommandExecutionResult>;
 }
 
 /** remote command実行失敗を表します。 */

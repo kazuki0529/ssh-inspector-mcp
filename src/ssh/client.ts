@@ -5,6 +5,7 @@ import { Client, type ConnectConfig, type SFTPWrapper } from "ssh2";
 import type { AppConfig } from "../config/schema.js";
 import {
   executeRemoteCommand,
+  type CommandExecutionOptions,
   type CommandExecutionResult,
   type RemoteCommandRunner,
 } from "../execution/executor.js";
@@ -89,15 +90,18 @@ export class SshClient implements SftpSessionProvider, RemoteCommandRunner {
   }
 
   /** @inheritdoc */
-  public async execute(command: RemoteCommand): Promise<CommandExecutionResult> {
+  public async execute(
+    command: RemoteCommand,
+    options: CommandExecutionOptions = {},
+  ): Promise<CommandExecutionResult> {
     return this.#limiter.run(async () => {
       const client = await this.#getClient();
 
       return executeRemoteCommand(
         client,
         command,
-        this.#maxOutputBytes,
-        this.#operationTimeoutMs,
+        Math.min(options.maxOutputBytes ?? this.#maxOutputBytes, this.#maxOutputBytes),
+        Math.min(options.timeoutMs ?? this.#operationTimeoutMs, this.#operationTimeoutMs),
       );
     });
   }

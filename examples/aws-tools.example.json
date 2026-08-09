@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "tools": [
+    {
+      "name": "aws_ec2_describe_instances_compact",
+      "description": "指定したEC2 instanceのmetadataを参照します。",
+      "service": "ec2",
+      "operation": "describe-instances",
+      "region": "ap-northeast-1",
+      "fixedArgs": {},
+      "parameters": [
+        {
+          "name": "instanceIds",
+          "cliName": "instance-ids",
+          "description": "対象instance ID一覧",
+          "type": "stringArray",
+          "required": true,
+          "minItems": 1,
+          "maxItems": 20,
+          "itemMaxLength": 32
+        }
+      ],
+      "timeoutMs": 10000,
+      "maxOutputBytes": 65536
+    }
+  ]
+}

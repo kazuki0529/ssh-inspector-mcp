@@ -91,6 +91,7 @@ export const appConfigSchema = z
         allowedRegions: z.array(z.string().regex(/^[a-z]{2}(?:-gov)?-[a-z]+-\d$/)).max(32).default([]),
         s3: z.array(s3AccessRuleSchema).max(128).default([]),
         dynamodb: z.array(dynamodbAccessRuleSchema).max(128).default([]),
+        extensionSpecPaths: z.array(z.string().min(1).max(4096)).max(32).default([]),
       })
       .strict()
       .prefault({}),

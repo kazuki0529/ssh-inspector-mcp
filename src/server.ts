@@ -6,6 +6,9 @@ import { registerS3Tools } from "./aws/register-s3-tools.js";
 import type { S3Service } from "./aws/s3.js";
 import { registerDynamoDbTools } from "./aws/register-dynamodb-tools.js";
 import type { DynamoDbService } from "./aws/dynamodb.js";
+import { registerAwsExtensionTools } from "./aws/register-extension-tools.js";
+import type { AwsToolSpec } from "./aws/spec-schema.js";
+import type { RemoteCommandRunner } from "./execution/executor.js";
 import type { AppConfig } from "./config/schema.js";
 import { registerRhelTools, type RhelToolDependencies } from "./tools/register-rhel-tools.js";
 import { registerSftpTools } from "./tools/register-sftp-tools.js";
@@ -18,6 +21,8 @@ export interface ServerDependencies {
   cloudWatch: CloudWatchService;
   s3: S3Service;
   dynamodb: DynamoDbService;
+  extensionRunner: RemoteCommandRunner;
+  extensionSpecs: readonly AwsToolSpec[];
 }
 
 /**
@@ -47,6 +52,7 @@ export function createServer(config: AppConfig, dependencies: ServerDependencies
   registerCloudWatchTools(server, dependencies.cloudWatch);
   registerS3Tools(server, dependencies.s3);
   registerDynamoDbTools(server, dependencies.dynamodb);
+  registerAwsExtensionTools(server, dependencies.extensionRunner, dependencies.extensionSpecs, config.aws.allowedRegions);
 
   return server;
 }

@@ -1,7 +1,7 @@
 import type { RemoteCommand } from "../execution/render-command.js";
 
-/** 標準搭載するAWS serviceです。 */
-export type StandardAwsService = "cloudwatch" | "dynamodb" | "s3api";
+/** 固定builderが許可するAWS serviceです。 */
+export type AllowedAwsService = "cloudwatch" | "dynamodb" | "ec2" | "logs" | "rds" | "s3api";
 
 /** AWS CLI parameterの安全な値型です。 */
 export type AwsParameterValue = boolean | number | string | readonly string[] | object;
@@ -21,7 +21,7 @@ export class AwsPolicyError extends Error {
 
 /** AWS CLI command builderの入力です。 */
 export interface BuildAwsCommandInput {
-  service: StandardAwsService;
+  service: AllowedAwsService;
   operation: string;
   region: string;
   allowedRegions: ReadonlySet<string>;
