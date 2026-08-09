@@ -3,7 +3,13 @@ import { readFile, stat } from "node:fs/promises";
 import { Client, type ConnectConfig, type SFTPWrapper } from "ssh2";
 
 import type { AppConfig } from "../config/schema.js";
+import {
+  executeRemoteCommand,
+  type CommandExecutionResult,
+  type RemoteCommandRunner,
+} from "../execution/executor.js";
 import { OperationLimiter } from "../execution/limits.js";
+import type { RemoteCommand } from "../execution/render-command.js";
 import { createHostVerifier } from "./host-verifier.js";
 import { Ssh2RemoteFileSystem, type RemoteFileSystem } from "./sftp.js";
 
@@ -33,10 +39,11 @@ export interface SftpSessionProvider {
 /**
  * 1台に固定したSSH接続をlazyに確立し、boundedなSFTP channelだけを公開します。
  */
-export class SshClient implements SftpSessionProvider {
+export class SshClient implements SftpSessionProvider, RemoteCommandRunner {
   readonly #config: SshConfig;
   readonly #environment: NodeJS.ProcessEnv;
   readonly #operationTimeoutMs: number;
+  readonly #maxOutputBytes: number;
   readonly #limiter: OperationLimiter;
   #client: Client | undefined;
   #connecting: Promise<Client> | undefined;
@@ -51,6 +58,7 @@ export class SshClient implements SftpSessionProvider {
     this.#config = config.ssh;
     this.#environment = environment;
     this.#operationTimeoutMs = config.limits.operationTimeoutMs;
+    this.#maxOutputBytes = config.limits.maxOutputBytes;
     this.#limiter = new OperationLimiter(config.limits.maxConcurrentOperations);
   }
 
@@ -77,6 +85,20 @@ export class SshClient implements SftpSessionProvider {
         clearTimeout(timeout);
         fileSystem.close();
       }
+    });
+  }
+
+  /** @inheritdoc */
+  public async execute(command: RemoteCommand): Promise<CommandExecutionResult> {
+    return this.#limiter.run(async () => {
+      const client = await this.#getClient();
+
+      return executeRemoteCommand(
+        client,
+        command,
+        this.#maxOutputBytes,
+        this.#operationTimeoutMs,
+      );
     });
   }
 

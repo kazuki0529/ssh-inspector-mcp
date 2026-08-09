@@ -1,10 +1,9 @@
-import { randomUUID } from "node:crypto";
-
 import type { McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
 
 import type { AppConfig } from "../config/schema.js";
 import type { SftpInspector } from "./sftp-inspector.js";
+import { executeTool } from "./tool-result.js";
 
 /**
  * SSH/SFTP参照toolをMCP serverへ登録します。
@@ -69,41 +68,4 @@ export function registerSftpTools(
     },
     async ({ path, lines }) => executeTool(async () => inspector.readTail(path, lines)),
   );
-}
-
-/**
- * operation metadataと安全なMCP error形式を全SFTP toolへ一貫して適用します。
- *
- * @param operation tool本体
- * @returns MCP tool result
- */
-async function executeTool<Result>(operation: () => Promise<Result>) {
-  const operationId = randomUUID();
-  const startedAt = performance.now();
-
-  try {
-    const data = await operation();
-    const result = {
-      operationId,
-      durationMs: Math.round(performance.now() - startedAt),
-      data,
-    };
-
-    return {
-      content: [{ type: "text" as const, text: JSON.stringify(result) }],
-      structuredContent: result,
-    };
-  } catch (error) {
-    const result = {
-      operationId,
-      durationMs: Math.round(performance.now() - startedAt),
-      error: error instanceof Error ? error.message : "不明なSFTPエラーが発生しました",
-    };
-
-    return {
-      isError: true,
-      content: [{ type: "text" as const, text: JSON.stringify(result) }],
-      structuredContent: result,
-    };
-  }
 }

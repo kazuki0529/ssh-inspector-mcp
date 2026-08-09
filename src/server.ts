@@ -1,12 +1,14 @@
 import { McpServer } from "@modelcontextprotocol/server";
 
 import type { AppConfig } from "./config/schema.js";
+import { registerRhelTools, type RhelToolDependencies } from "./tools/register-rhel-tools.js";
 import { registerSftpTools } from "./tools/register-sftp-tools.js";
 import type { SftpInspector } from "./tools/sftp-inspector.js";
 
 /** MCP serverが利用する外部serviceです。 */
 export interface ServerDependencies {
   sftpInspector: SftpInspector;
+  rhel: RhelToolDependencies;
 }
 
 /**
@@ -32,6 +34,7 @@ export function createServer(config: AppConfig, dependencies: ServerDependencies
   );
 
   registerSftpTools(server, dependencies.sftpInspector, config);
+  registerRhelTools(server, dependencies.rhel, config);
 
   return server;
 }

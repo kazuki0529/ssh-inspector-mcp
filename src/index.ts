@@ -3,7 +3,10 @@ import { StdioServerTransport } from "@modelcontextprotocol/server/stdio";
 import { loadConfig, resolveConfigPath } from "./config/load.js";
 import { createServer } from "./server.js";
 import { SshClient } from "./ssh/client.js";
+import { FindFilesService } from "./tools/find-files.js";
+import { SearchTextService } from "./tools/search-text.js";
 import { SftpInspector } from "./tools/sftp-inspector.js";
+import { SystemInfoService } from "./tools/system-info.js";
 
 /**
  * stdioをMCPプロトコル専用に保ったままサーバーを起動します。
@@ -13,7 +16,14 @@ async function main(): Promise<void> {
   const config = await loadConfig(configPath);
   const sshClient = new SshClient(config);
   const sftpInspector = new SftpInspector(sshClient, config);
-  const server = createServer(config, { sftpInspector });
+  const server = createServer(config, {
+    sftpInspector,
+    rhel: {
+      findFiles: new FindFilesService(sshClient, sshClient, config),
+      searchText: new SearchTextService(sshClient, sshClient, config),
+      systemInfo: new SystemInfoService(sshClient, config),
+    },
+  });
   const transport = new StdioServerTransport();
 
   if (config.access.allowAllReadablePaths) {
