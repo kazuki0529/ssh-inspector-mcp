@@ -1,4 +1,5 @@
 import { build } from "esbuild";
+import { chmod } from "node:fs/promises";
 
 const optionalNativePlugin = {
   name: "optional-native",
@@ -22,6 +23,8 @@ await build({
   legalComments: "eof",
   plugins: [optionalNativePlugin],
   banner: {
-    js: "#!/usr/bin/env node",
+    js: "#!/usr/bin/env node\nimport { createRequire as __createRequire } from 'node:module';\nimport { dirname as __pathDirname } from 'node:path';\nimport { fileURLToPath as __fileURLToPath } from 'node:url';\nconst require = __createRequire(import.meta.url);\nconst __filename = __fileURLToPath(import.meta.url);\nconst __dirname = __pathDirname(__filename);",
   },
 });
+
+await chmod("dist/ssh-inspector.mjs", 0o755);

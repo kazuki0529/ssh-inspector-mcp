@@ -19,7 +19,9 @@
     "start": "node dist/ssh-inspector.mjs",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "verify": "npm run typecheck && npm run lint && npm test && npm run build"
+    "verify": "npm run typecheck && npm run lint && npm test && npm run build && npm run verify:bundle && npm run verify:mcp",
+    "verify:bundle": "node scripts/verify-bundle.mjs",
+    "verify:mcp": "node scripts/verify-mcp.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/server": "2.0.0",
@@ -28,6 +30,7 @@
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
+    "@modelcontextprotocol/client": "^2.0.0",
     "@types/node": "26.2.0",
     "@types/ssh2": "1.15.5",
     "esbuild": "0.28.2",
