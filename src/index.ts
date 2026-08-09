@@ -1,6 +1,7 @@
 import { StdioServerTransport } from "@modelcontextprotocol/server/stdio";
 
 import { CloudWatchCommandBuilder, CloudWatchService } from "./aws/cloudwatch.js";
+import { S3AccessPolicy, S3CommandBuilder, S3Service } from "./aws/s3.js";
 import { loadConfig, resolveConfigPath } from "./config/load.js";
 import { createServer } from "./server.js";
 import { SshClient } from "./ssh/client.js";
@@ -17,6 +18,7 @@ async function main(): Promise<void> {
   const config = await loadConfig(configPath);
   const sshClient = new SshClient(config);
   const sftpInspector = new SftpInspector(sshClient, config);
+  const s3Policy = new S3AccessPolicy(config);
   const server = createServer(config, {
     sftpInspector,
     rhel: {
@@ -25,6 +27,7 @@ async function main(): Promise<void> {
       systemInfo: new SystemInfoService(sshClient, config),
     },
     cloudWatch: new CloudWatchService(sshClient, new CloudWatchCommandBuilder(config)),
+    s3: new S3Service(sshClient, new S3CommandBuilder(config, s3Policy), s3Policy, config),
   });
   const transport = new StdioServerTransport();
 
