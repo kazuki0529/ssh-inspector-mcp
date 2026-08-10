@@ -45,9 +45,10 @@ RHEL toolは次のabsolute pathを前提とします。
 ```text
 /usr/bin/find /usr/bin/grep /usr/bin/rpm /usr/bin/uname /usr/bin/uptime
 /usr/bin/df /usr/bin/free /usr/bin/ps /usr/bin/systemctl /usr/bin/aws
+/usr/bin/zgrep /usr/bin/bzgrep /usr/bin/xzgrep
 ```
 
-PATHやshell aliasには依存しません。package更新でpathやCLI behaviorが変わる場合はstagingでtestします。
+PATHやshell aliasには依存しません。圧縮検索を使う場合は対象形式のgrep wrapper packageを導入します。package更新でpathやCLI behaviorが変わる場合はstagingでtestします。
 
 ## AWS credential
 

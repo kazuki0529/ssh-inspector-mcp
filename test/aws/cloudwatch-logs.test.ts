@@ -2,12 +2,36 @@ import { describe, expect, it } from "vitest";
 
 import {
   CloudWatchLogsCommandBuilder,
+  describeLogGroupsInputSchema,
   describeLogStreamsInputSchema,
   filterLogEventsInputSchema,
   getLogEventsInputSchema,
 } from "../../src/aws/cloudwatch-logs.js";
 
 describe("CloudWatchLogsCommandBuilder", () => {
+  it("log group patternをdescribe-log-groupsの固定argvへ変換する", () => {
+    const builder = new CloudWatchLogsCommandBuilder();
+    const input = describeLogGroupsInputSchema.parse({
+      region: "ap-northeast-1",
+      logGroupNamePattern: "application",
+      limit: 25,
+    });
+
+    const command = builder.describeLogGroups(input);
+
+    expect(command.args.slice(0, 2)).toEqual(["logs", "describe-log-groups"]);
+    expect(command.args).toContain("--log-group-name-pattern");
+    expect(command.args).toContain("application");
+  });
+
+  it("log group prefixとpatternの同時指定を拒否する", () => {
+    expect(() => describeLogGroupsInputSchema.parse({
+      region: "ap-northeast-1",
+      logGroupNamePrefix: "/aws/lambda/",
+      logGroupNamePattern: "application",
+    })).toThrow(/同時指定/);
+  });
+
   it("任意log groupのfilter条件とISO時刻を固定argvへ変換する", () => {
     const builder = new CloudWatchLogsCommandBuilder();
     const input = filterLogEventsInputSchema.parse({

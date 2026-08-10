@@ -10,6 +10,21 @@ const logGroupNameSchema = z.string().min(1).max(512);
 const logStreamNameSchema = z.string().min(1).max(512);
 const timestampSchema = z.iso.datetime({ offset: true }).optional();
 
+/** CloudWatch Logs log group検索入力schemaです。 */
+export const describeLogGroupsInputSchema = z
+  .object({
+    region: z.string(),
+    logGroupNamePrefix: z.string().min(1).max(512).optional(),
+    logGroupNamePattern: z.string().min(1).max(512).optional(),
+    limit: z.number().int().min(1).max(50).default(50),
+    nextToken: tokenSchema,
+  })
+  .strict()
+  .refine(
+    (input) => input.logGroupNamePrefix === undefined || input.logGroupNamePattern === undefined,
+    "logGroupNamePrefixとlogGroupNamePatternは同時指定できません",
+  );
+
 /** CloudWatch Logs log stream一覧入力schemaです。 */
 export const describeLogStreamsInputSchema = z
   .object({
@@ -62,6 +77,8 @@ export const getLogEventsInputSchema = z
   .strict()
   .superRefine(validateTimeRange);
 
+/** log group検索入力型です。 */
+export type DescribeLogGroupsInput = z.infer<typeof describeLogGroupsInputSchema>;
 /** log stream一覧入力型です。 */
 export type DescribeLogStreamsInput = z.infer<typeof describeLogStreamsInputSchema>;
 /** log event検索入力型です。 */
@@ -73,6 +90,21 @@ export type GetLogEventsInput = z.infer<typeof getLogEventsInputSchema>;
  * CloudWatch Logs入力を固定AWS CLI commandへ変換します。
  */
 export class CloudWatchLogsCommandBuilder {
+  /**
+   * log group metadataの検索commandを生成します。
+   *
+   * @param input 検証済み入力
+   * @returns 固定AWS CLI command
+   */
+  public describeLogGroups(input: DescribeLogGroupsInput): RemoteCommand {
+    return this.#build("describe-log-groups", input.region, {
+      "log-group-name-prefix": input.logGroupNamePrefix,
+      "log-group-name-pattern": input.logGroupNamePattern,
+      limit: input.limit,
+      "next-token": input.nextToken,
+    });
+  }
+
   /**
    * log stream metadata一覧commandを生成します。
    *
@@ -165,6 +197,16 @@ export class CloudWatchLogsService {
   public constructor(runner: RemoteCommandRunner, builder: CloudWatchLogsCommandBuilder) {
     this.#runner = runner;
     this.#builder = builder;
+  }
+
+  /**
+   * log group metadataをprefixまたはpatternで検索します。
+   *
+   * @param input log group検索入力
+   * @returns AWS JSON
+   */
+  public async describeLogGroups(input: DescribeLogGroupsInput): Promise<{ result: unknown }> {
+    return { result: await executeAwsJson(this.#runner, this.#builder.describeLogGroups(input)) };
   }
 
   /**

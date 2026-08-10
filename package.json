@@ -5,10 +5,10 @@
   "type": "module",
   "private": true,
   "bin": {
-    "ssh-inspector-mcp": "./dist/ssh-inspector.mjs"
+    "ssh-inspector-mcp": "./dist/ssh-inspector-mcp.mjs"
   },
   "files": [
-    "dist/ssh-inspector.mjs"
+    "dist/ssh-inspector-mcp.mjs"
   ],
   "engines": {
     "node": ">=20"
@@ -16,7 +16,7 @@
   "scripts": {
     "build": "npm run typecheck && node esbuild.config.mjs",
     "lint": "eslint .",
-    "start": "node dist/ssh-inspector.mjs",
+    "start": "node dist/ssh-inspector-mcp.mjs",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "verify": "npm run typecheck && npm run lint && npm test && npm run build && npm run verify:bundle && npm run verify:mcp",

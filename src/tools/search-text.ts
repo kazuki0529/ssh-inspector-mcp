@@ -6,6 +6,8 @@ import { RemotePathPolicy } from "../ssh/path-policy.js";
 
 /** grep patternの解釈方式です。 */
 export type SearchPatternMode = "literal" | "extendedRegex";
+/** 検索対象fileの圧縮形式です。 */
+export type SearchCompression = "none" | "gzip" | "bzip2" | "xz";
 
 /** grep operationの構造化入力です。 */
 export interface SearchTextInput {
@@ -13,6 +15,7 @@ export interface SearchTextInput {
   query: string;
   mode: SearchPatternMode;
   caseSensitive: boolean;
+  compression?: SearchCompression | undefined;
   includeGlob?: string | undefined;
   limit: number;
 }
@@ -32,6 +35,10 @@ export interface SearchTextResult {
  * @returns 固定executableとargv
  */
 export function buildGrepCommand(input: SearchTextInput): RemoteCommand {
+  if (input.compression !== undefined && input.compression !== "none") {
+    return buildCompressedGrepCommand(input, input.compression);
+  }
+
   const args = [
     "--recursive",
     "--directories=recurse",
@@ -52,6 +59,46 @@ export function buildGrepCommand(input: SearchTextInput): RemoteCommand {
   args.push("--", input.query, input.root);
 
   return { executable: "/usr/bin/grep", args };
+}
+
+const compressedGrepSettings = {
+  gzip: { executable: "/usr/bin/zgrep", defaultGlob: "*.gz" },
+  bzip2: { executable: "/usr/bin/bzgrep", defaultGlob: "*.bz2" },
+  xz: { executable: "/usr/bin/xzgrep", defaultGlob: "*.xz" },
+} as const;
+
+/**
+ * 圧縮fileだけを列挙し、固定したgrep wrapperへまとめて渡します。
+ *
+ * @param input canonical rootを含む検証済み入力
+ * @param compression 圧縮形式
+ * @returns shell pipelineを使わない固定find command
+ */
+function buildCompressedGrepCommand(
+  input: SearchTextInput,
+  compression: Exclude<SearchCompression, "none">,
+): RemoteCommand {
+  const settings = compressedGrepSettings[compression];
+  const args = [
+    input.root,
+    "-type",
+    "f",
+    "-name",
+    input.includeGlob ?? settings.defaultGlob,
+    "-exec",
+    settings.executable,
+    "--line-number",
+    "--with-filename",
+    "--no-messages",
+    input.mode === "literal" ? "--fixed-strings" : "--extended-regexp",
+  ];
+
+  if (!input.caseSensitive) {
+    args.push("--ignore-case");
+  }
+  args.push("--", input.query, "{}", "+");
+
+  return { executable: "/usr/bin/find", args };
 }
 
 /**

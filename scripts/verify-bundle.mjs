@@ -5,10 +5,10 @@ import { spawn } from "node:child_process";
 import process from "node:process";
 
 const temporaryDirectory = await mkdtemp(join(tmpdir(), "ssh-inspector-bundle-"));
-const bundlePath = join(temporaryDirectory, "ssh-inspector.mjs");
+const bundlePath = join(temporaryDirectory, "ssh-inspector-mcp.mjs");
 
 try {
-  await copyFile(resolve("dist/ssh-inspector.mjs"), bundlePath);
+  await copyFile(resolve("dist/ssh-inspector-mcp.mjs"), bundlePath);
   const result = await runNode(bundlePath);
 
   if (result.exitCode !== 1 || !result.stderr.includes("使用方法:")) {

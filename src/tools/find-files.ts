@@ -12,6 +12,7 @@ export interface FindFilesInput {
   root: string;
   nameGlob?: string | undefined;
   type: FindFileType;
+  modifiedAfter?: string | undefined;
   maxDepth: number;
   limit: number;
 }
@@ -40,6 +41,9 @@ export function buildFindCommand(input: FindFilesInput): RemoteCommand {
   }
   if (input.nameGlob !== undefined) {
     args.push("-name", input.nameGlob);
+  }
+  if (input.modifiedAfter !== undefined) {
+    args.push("-newermt", input.modifiedAfter);
   }
   args.push("-print0");
 

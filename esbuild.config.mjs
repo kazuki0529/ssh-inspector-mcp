@@ -1,5 +1,7 @@
 import { build } from "esbuild";
-import { chmod } from "node:fs/promises";
+import { chmod, rm } from "node:fs/promises";
+
+const bundlePath = "dist/ssh-inspector-mcp.mjs";
 
 const optionalNativePlugin = {
   name: "optional-native",
@@ -12,13 +14,15 @@ const optionalNativePlugin = {
   },
 };
 
+await rm("dist/ssh-inspector.mjs", { force: true });
+
 await build({
   entryPoints: ["src/index.ts"],
   bundle: true,
   platform: "node",
   format: "esm",
   target: "node20",
-  outfile: "dist/ssh-inspector.mjs",
+  outfile: bundlePath,
   sourcemap: false,
   legalComments: "eof",
   plugins: [optionalNativePlugin],
@@ -27,4 +31,4 @@ await build({
   },
 });
 
-await chmod("dist/ssh-inspector.mjs", 0o755);
+await chmod(bundlePath, 0o755);

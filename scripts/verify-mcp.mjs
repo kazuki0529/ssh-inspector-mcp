@@ -10,6 +10,7 @@ const expectedTools = [
   "aws_cloudwatch_describe_alarms",
   "aws_cloudwatch_get_metric_data",
   "aws_cloudwatch_list_metrics",
+  "aws_cloudwatch_logs_describe_log_groups",
   "aws_cloudwatch_logs_describe_log_streams",
   "aws_cloudwatch_logs_filter_log_events",
   "aws_cloudwatch_logs_get_log_events",
@@ -46,7 +47,7 @@ await writeFile(configPath, JSON.stringify(config), "utf8");
 
 const transport = new StdioClientTransport({
   command: process.execPath,
-  args: [resolve("dist/ssh-inspector.mjs"), "--config", configPath],
+  args: [resolve("dist/ssh-inspector-mcp.mjs"), "--config", configPath],
   stderr: "pipe",
 });
 const client = new Client({ name: "ssh-inspector-integration", version: "1.0.0" });
@@ -58,6 +59,16 @@ try {
 
   if (JSON.stringify(actualTools) !== JSON.stringify(expectedTools)) {
     throw new Error(`MCP tool discoveryが一致しません: ${JSON.stringify(actualTools)}`);
+  }
+
+  const unsupportedKeywords = ["oneOf", "allOf", "anyOf"];
+  const incompatibleSchemas = response.tools.flatMap((tool) =>
+    unsupportedKeywords
+      .filter((keyword) => Object.hasOwn(tool.inputSchema, keyword))
+      .map((keyword) => `${tool.name}:${keyword}`),
+  );
+  if (incompatibleSchemas.length > 0) {
+    throw new Error(`Kiro非互換のroot schema keywordがあります: ${incompatibleSchemas.join(", ")}`);
   }
 } finally {
   await client.close();

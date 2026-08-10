@@ -4,7 +4,7 @@
       "type": "stdio",
       "command": "node",
       "args": [
-        "${workspaceFolder}/dist/ssh-inspector.mjs",
+        "${workspaceFolder}/dist/ssh-inspector-mcp.mjs",
         "--config",
         "${workspaceFolder}/config.local.json"
       ]

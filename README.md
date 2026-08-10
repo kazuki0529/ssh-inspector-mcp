@@ -18,10 +18,10 @@ npm ci
 npm run verify
 ```
 
-配布物は [dist/ssh-inspector.mjs](dist/ssh-inspector.mjs) だけです。設定JSONと任意のAWS拡張specはbundle外で管理します。
+配布物は [dist/ssh-inspector-mcp.mjs](dist/ssh-inspector-mcp.mjs) だけです。設定JSONと任意のAWS拡張specはbundle外で管理します。
 
 ```bash
-node dist/ssh-inspector.mjs --config /absolute/path/to/config.json
+node dist/ssh-inspector-mcp.mjs --config /absolute/path/to/config.json
 ```
 
 stdioのstdoutはJSON-RPC専用です。警告と起動errorはstderrへ出力します。
@@ -56,7 +56,7 @@ private key認証ではlocal key fileを0600以下にします。暗号化keyの
 | SSH/SFTP | `ssh_health_check`, `ssh_list_directory`, `ssh_read_file_head`, `ssh_read_file_tail` |
 | RHEL | `ssh_find_files`, `ssh_search_text`, `ssh_system_info` |
 | CloudWatch | `aws_cloudwatch_describe_alarms`, `aws_cloudwatch_list_metrics`, `aws_cloudwatch_get_metric_data` |
-| CloudWatch Logs metadata | `aws_cloudwatch_logs_describe_log_streams` |
+| CloudWatch Logs metadata | `aws_cloudwatch_logs_describe_log_groups`, `aws_cloudwatch_logs_describe_log_streams` |
 | CloudWatch Logs data | `aws_cloudwatch_logs_filter_log_events`, `aws_cloudwatch_logs_get_log_events` |
 | S3 metadata | `aws_s3_list_buckets`, `aws_s3_list_objects`, `aws_s3_head_object` |
 | S3 data | `aws_s3_get_object_text` |
@@ -64,6 +64,10 @@ private key認証ではlocal key fileを0600以下にします。暗号化keyの
 | DynamoDB data | `aws_dynamodb_get_item`, `aws_dynamodb_query` |
 
 AWS resourceとregionの参照可否はSSH先のIAM policyで制御します。S3 data toolはIAMで参照可能な無圧縮UTF-8 textだけをbyte rangeで取得します。CloudWatch Logsは最大24時間・100 events、DynamoDB queryは最大100 itemsに制限し、DynamoDB `scan` は標準toolとして公開しません。data toolsのauto-approveは推奨しません。
+
+`ssh_find_files` の `modifiedAfter` はtimezone付きISO 8601日時を受け取り、固定した `find -newermt` 条件として扱います。`ssh_search_text` の `compression` は `none`、`gzip`、`bzip2`、`xz` を選択でき、圧縮時の既定globはそれぞれ `*.gz`、`*.bz2`、`*.xz` です。`includeGlob` で対象名をさらに限定できます。
+
+`aws_cloudwatch_logs_describe_log_groups` は `logGroupNamePrefix` または `logGroupNamePattern` でlog groupを最大50件検索します。両条件は同時指定できず、続きは `nextToken` で取得します。
 
 ## AWS拡張
 
@@ -88,7 +92,7 @@ AWS resourceとregionの参照可否はSSH先のIAM policyで制御します。S
   "mcpServers": {
     "ssh-inspector": {
       "command": "node",
-      "args": ["/absolute/path/ssh-inspector.mjs", "--config", "/absolute/path/config.json"],
+      "args": ["/absolute/path/ssh-inspector-mcp.mjs", "--config", "/absolute/path/config.json"],
       "disabled": false,
       "autoApprove": [
         "ssh_health_check",
@@ -101,6 +105,7 @@ AWS resourceとregionの参照可否はSSH先のIAM policyで制御します。S
         "aws_cloudwatch_describe_alarms",
         "aws_cloudwatch_list_metrics",
         "aws_cloudwatch_get_metric_data",
+        "aws_cloudwatch_logs_describe_log_groups",
         "aws_cloudwatch_logs_describe_log_streams",
         "aws_cloudwatch_logs_filter_log_events",
         "aws_cloudwatch_logs_get_log_events",
@@ -127,7 +132,7 @@ AWS resourceとregionの参照可否はSSH先のIAM policyで制御します。S
   "mcpServers": {
     "ssh-inspector": {
       "command": "node",
-      "args": ["/absolute/path/ssh-inspector.mjs", "--config", "/absolute/path/config.json"]
+      "args": ["/absolute/path/ssh-inspector-mcp.mjs", "--config", "/absolute/path/config.json"]
     }
   }
 }
@@ -136,7 +141,7 @@ AWS resourceとregionの参照可否はSSH先のIAM policyで制御します。S
 ### Claude Code
 
 ```bash
-claude mcp add --transport stdio --scope user ssh-inspector -- node /absolute/path/ssh-inspector.mjs --config /absolute/path/config.json
+claude mcp add --transport stdio --scope user ssh-inspector -- node /absolute/path/ssh-inspector-mcp.mjs --config /absolute/path/config.json
 ```
 
 ## 運用

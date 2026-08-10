@@ -35,6 +35,7 @@ export function registerRhelTools(
           root: z.string().min(1).max(4096).startsWith("/"),
           nameGlob: z.string().min(1).max(255).optional(),
           type: z.enum(["any", "directory", "file"]).default("any"),
+          modifiedAfter: z.iso.datetime({ offset: true }).optional(),
           maxDepth: z.number().int().min(0).max(32).default(8),
           limit: z.number().int().min(1).max(config.limits.maxResults).default(100),
         })
@@ -46,13 +47,14 @@ export function registerRhelTools(
   server.registerTool(
     "ssh_search_text",
     {
-      description: "許可read root内のtextを固定grep templateで検索します。literal検索が既定です。",
+      description: "許可read root内の通常・gzip・bzip2・xz textを固定grep templateで検索します。literal検索が既定です。",
       inputSchema: z
         .object({
           root: z.string().min(1).max(4096).startsWith("/"),
           query: z.string().min(1).max(512),
           mode: z.enum(["literal", "extendedRegex"]).default("literal"),
           caseSensitive: z.boolean().default(true),
+          compression: z.enum(["none", "gzip", "bzip2", "xz"]).default("none"),
           includeGlob: z.string().min(1).max(255).optional(),
           limit: z.number().int().min(1).max(config.limits.maxResults).default(100),
         })
@@ -61,21 +63,21 @@ export function registerRhelTools(
     async (input) => executeTool(async () => dependencies.searchText.search(input)),
   );
 
-  const systemInfoInput = z.discriminatedUnion("kind", [
-    z.object({ kind: z.enum(["filesystem", "kernel", "memory", "processes", "release", "uptime"]) }).strict(),
-    z
-      .object({
-        kind: z.literal("package"),
-        packageName: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9+_.-]{0,127}$/),
-      })
-      .strict(),
-    z
-      .object({
-        kind: z.literal("service"),
-        unit: z.string().regex(/^[A-Za-z0-9_.@-]+$/),
-      })
-      .strict(),
-  ]);
+  const systemInfoInput = z
+    .object({
+      kind: z.enum(["filesystem", "kernel", "memory", "processes", "release", "uptime", "package", "service"]),
+      packageName: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9+_.-]{0,127}$/).optional(),
+      unit: z.string().regex(/^[A-Za-z0-9_.@-]+$/).optional(),
+    })
+    .strict()
+    .superRefine((input, context) => {
+      if ((input.kind === "package") !== (input.packageName !== undefined)) {
+        context.addIssue({ code: "custom", path: ["packageName"], message: "package指定時だけpackageNameが必要です" });
+      }
+      if ((input.kind === "service") !== (input.unit !== undefined)) {
+        context.addIssue({ code: "custom", path: ["unit"], message: "service指定時だけunitが必要です" });
+      }
+    });
 
   server.registerTool(
     "ssh_system_info",
@@ -83,6 +85,17 @@ export function registerRhelTools(
       description: "RHEL release、kernel、uptime、filesystem、memory、process、package、許可serviceを参照します。",
       inputSchema: systemInfoInput,
     },
-    async (input) => executeTool(async () => dependencies.systemInfo.inspect(input)),
+    async (input) => executeTool(async () => {
+      if (input.kind === "package" && input.packageName !== undefined) {
+        return dependencies.systemInfo.inspect({ kind: input.kind, packageName: input.packageName });
+      }
+      if (input.kind === "service" && input.unit !== undefined) {
+        return dependencies.systemInfo.inspect({ kind: input.kind, unit: input.unit });
+      }
+      if (input.kind !== "package" && input.kind !== "service") {
+        return dependencies.systemInfo.inspect({ kind: input.kind });
+      }
+      throw new Error("system情報入力の必須parameterがありません");
+    }),
   );
 }

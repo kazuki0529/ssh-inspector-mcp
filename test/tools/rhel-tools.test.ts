@@ -68,12 +68,24 @@ describe("RHEL command builders", () => {
         root: "/var/log",
         nameGlob: "*.log",
         type: "file",
+        modifiedAfter: "2026-08-09T00:00:00+09:00",
         maxDepth: 4,
         limit: 10,
       }),
     ).toEqual({
       executable: "/usr/bin/find",
-      args: ["/var/log", "-maxdepth", "4", "-type", "f", "-name", "*.log", "-print0"],
+      args: [
+        "/var/log",
+        "-maxdepth",
+        "4",
+        "-type",
+        "f",
+        "-name",
+        "*.log",
+        "-newermt",
+        "2026-08-09T00:00:00+09:00",
+        "-print0",
+      ],
     });
   });
 
@@ -89,6 +101,40 @@ describe("RHEL command builders", () => {
 
     expect(command.args.slice(-3)).toEqual(["--", "'; uname -a; '", "/var/log/app"]);
     expect(rendered).toContain("''\\''; uname -a; '\\''' ");
+  });
+
+  it("圧縮logを固定find -execとzgrepで再帰検索する", () => {
+    const command = buildGrepCommand({
+      root: "/var/log/app",
+      query: "ERROR",
+      mode: "literal",
+      caseSensitive: false,
+      compression: "gzip",
+      includeGlob: "*.log.gz",
+      limit: 10,
+    });
+
+    expect(command).toEqual({
+      executable: "/usr/bin/find",
+      args: [
+        "/var/log/app",
+        "-type",
+        "f",
+        "-name",
+        "*.log.gz",
+        "-exec",
+        "/usr/bin/zgrep",
+        "--line-number",
+        "--with-filename",
+        "--no-messages",
+        "--fixed-strings",
+        "--ignore-case",
+        "--",
+        "ERROR",
+        "{}",
+        "+",
+      ],
+    });
   });
 
   it("system情報種別を固定templateへ変換する", () => {
