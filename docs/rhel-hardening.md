@@ -50,6 +50,8 @@ RHEL toolは次のabsolute pathを前提とします。
 
 PATHやshell aliasには依存しません。圧縮検索を使う場合は対象形式のgrep wrapper packageを導入します。package更新でpathやCLI behaviorが変わる場合はstagingでtestします。
 
+本文検索は通常fileを含めて固定`find -exec`から対応grepを呼び出します。利用者入力はpath・日時・glob・patternの独立argvとして渡されますが、広いrootや深い`maxDepth`はI/O負荷を増やすため、許可rootとserver timeoutを開発環境のlog配置に合わせて絞ります。
+
 ## AWS credential
 
 instance profileなど短命credentialを優先し、SSH userのhomeへ長期access keyを保存しません。CloudTrailを有効化し、IAM policyではactionだけでなくregion、CloudWatch Logs log group、bucket/prefix、table ARN、index ARNを制限します。AWS resourceの参照可否はserver設定ではなく、このIAM policyだけで認可されます。

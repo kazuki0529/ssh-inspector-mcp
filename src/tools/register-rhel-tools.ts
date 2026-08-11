@@ -30,16 +30,7 @@ export function registerRhelTools(
     "ssh_find_files",
     {
       description: "許可list root内を固定find templateで検索します。symlinkは追跡しません。",
-      inputSchema: z
-        .object({
-          root: z.string().min(1).max(4096).startsWith("/"),
-          nameGlob: z.string().min(1).max(255).optional(),
-          type: z.enum(["any", "directory", "file"]).default("any"),
-          modifiedAfter: z.iso.datetime({ offset: true }).optional(),
-          maxDepth: z.number().int().min(0).max(32).default(8),
-          limit: z.number().int().min(1).max(config.limits.maxResults).default(100),
-        })
-        .strict(),
+      inputSchema: createFindFilesInputSchema(config.limits.maxResults),
     },
     async (input) => executeTool(async () => dependencies.findFiles.find(input)),
   );
@@ -48,17 +39,7 @@ export function registerRhelTools(
     "ssh_search_text",
     {
       description: "許可read root内の通常・gzip・bzip2・xz textを固定grep templateで検索します。literal検索が既定です。",
-      inputSchema: z
-        .object({
-          root: z.string().min(1).max(4096).startsWith("/"),
-          query: z.string().min(1).max(512),
-          mode: z.enum(["literal", "extendedRegex"]).default("literal"),
-          caseSensitive: z.boolean().default(true),
-          compression: z.enum(["none", "gzip", "bzip2", "xz"]).default("none"),
-          includeGlob: z.string().min(1).max(255).optional(),
-          limit: z.number().int().min(1).max(config.limits.maxResults).default(100),
-        })
-        .strict(),
+      inputSchema: createSearchTextInputSchema(config.limits.maxResults),
     },
     async (input) => executeTool(async () => dependencies.searchText.search(input)),
   );
@@ -98,4 +79,80 @@ export function registerRhelTools(
       throw new Error("system情報入力の必須parameterがありません");
     }),
   );
+}
+
+/**
+ * `ssh_find_files`のbounded input schemaを生成します。
+ *
+ * @param maxResults server全体の最大結果件数
+ * @returns find tool input schema
+ */
+export function createFindFilesInputSchema(maxResults: number) {
+  return z
+    .object({
+      root: z.string().min(1).max(4096).startsWith("/"),
+      nameGlob: z.string().min(1).max(255).optional(),
+      caseInsensitiveName: z.boolean().default(false),
+      type: z.enum(["any", "directory", "file"]).default("any"),
+      modifiedAfter: z.iso.datetime({ offset: true }).optional(),
+      modifiedBefore: z.iso.datetime({ offset: true }).optional(),
+      minSizeBytes: z.number().int().min(0).max(1_099_511_627_776).optional(),
+      maxSizeBytes: z.number().int().min(0).max(1_099_511_627_776).optional(),
+      excludePathGlobs: z.array(z.string().min(1).max(4096)).max(20).default([]),
+      maxDepth: z.number().int().min(0).max(32).default(8),
+      limit: z.number().int().min(1).max(maxResults).default(Math.min(100, maxResults)),
+    })
+    .strict()
+    .superRefine(validateBoundedRange);
+}
+
+/**
+ * `ssh_search_text`のbounded input schemaを生成します。
+ *
+ * @param maxResults server全体の最大結果件数
+ * @returns text search tool input schema
+ */
+export function createSearchTextInputSchema(maxResults: number) {
+  return z
+    .object({
+      root: z.string().min(1).max(4096).startsWith("/"),
+      query: z.string().min(1).max(512),
+      mode: z.enum(["literal", "extendedRegex"]).default("literal"),
+      caseSensitive: z.boolean().default(true),
+      compression: z.enum(["none", "gzip", "bzip2", "xz"]).default("none"),
+      includeGlob: z.string().min(1).max(255).optional(),
+      excludeGlobs: z.array(z.string().min(1).max(4096)).max(20).default([]),
+      contextBefore: z.number().int().min(0).max(5).default(0),
+      contextAfter: z.number().int().min(0).max(5).default(0),
+      maxDepth: z.number().int().min(0).max(32).default(8),
+      modifiedAfter: z.iso.datetime({ offset: true }).optional(),
+      modifiedBefore: z.iso.datetime({ offset: true }).optional(),
+      filesWithMatchesOnly: z.boolean().default(false),
+      limit: z.number().int().min(1).max(maxResults).default(Math.min(100, maxResults)),
+    })
+    .strict()
+    .superRefine((input, context) => {
+      validateBoundedRange(input, context);
+      if (input.filesWithMatchesOnly && (input.contextBefore > 0 || input.contextAfter > 0)) {
+        context.addIssue({ code: "custom", path: ["filesWithMatchesOnly"], message: "file名だけを返す場合はcontextを指定できません" });
+      }
+    });
+}
+
+/**
+ * 日時・sizeの下限と上限が逆転していないことを保証します。
+ *
+ * @param input 任意のbounded range入力
+ * @param context Zod検証context
+ */
+function validateBoundedRange(
+  input: { modifiedAfter?: string | undefined; modifiedBefore?: string | undefined; minSizeBytes?: number | undefined; maxSizeBytes?: number | undefined },
+  context: z.RefinementCtx,
+): void {
+  if (input.modifiedAfter !== undefined && input.modifiedBefore !== undefined && new Date(input.modifiedAfter).getTime() >= new Date(input.modifiedBefore).getTime()) {
+    context.addIssue({ code: "custom", path: ["modifiedBefore"], message: "modifiedBeforeはmodifiedAfterより後である必要があります" });
+  }
+  if (input.minSizeBytes !== undefined && input.maxSizeBytes !== undefined && input.minSizeBytes > input.maxSizeBytes) {
+    context.addIssue({ code: "custom", path: ["maxSizeBytes"], message: "maxSizeBytesはminSizeBytes以上である必要があります" });
+  }
 }
