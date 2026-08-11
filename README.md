@@ -67,7 +67,7 @@ AWS resourceとregionの参照可否はSSH先のIAM policyで制御します。S
 
 `ssh_get_file_metadata` は `allowedListRoots` 内のcanonical path、type、size、mtime、modeを本文なしで返します。`ssh_read_file_range` は `allowedReadRoots` 内のUTF-8 textを1始まりのline番号で取得し、`limits.maxReadScanBytes`（既定8 MiB）より後まで無制限に走査しません。
 
-`ssh_find_files` の `modifiedAfter` はtimezone付きISO 8601日時を受け取り、固定した `find -newermt` 条件として扱います。`ssh_search_text` の `compression` は `none`、`gzip`、`bzip2`、`xz` を選択でき、圧縮時の既定globはそれぞれ `*.gz`、`*.bz2`、`*.xz` です。`includeGlob` で対象名をさらに限定できます。
+`ssh_find_files` はtimezone付きISO 8601の `modifiedAfter` / `modifiedBefore`、size範囲、case-insensitiveなfile名、最大20個の除外path globで対象を絞れます。`ssh_search_text` は `none`、`gzip`、`bzip2`、`xz` を選択でき、圧縮時の既定globはそれぞれ `*.gz`、`*.bz2`、`*.xz` です。最大depth、更新期間、最大20個の除外glob、前後各5行のcontext、file名だけの結果を指定できます。すべて固定した `find -exec` templateを使い、利用者指定commandは実行しません。
 
 `aws_cloudwatch_logs_describe_log_groups` は `logGroupNamePrefix` または `logGroupNamePattern` でlog groupを最大50件検索します。両条件は同時指定できず、続きは `nextToken` で取得します。
 

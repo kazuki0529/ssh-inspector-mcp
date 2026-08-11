@@ -13,6 +13,10 @@ import {
   FindFilesService,
 } from "../../src/tools/find-files.js";
 import {
+  createFindFilesInputSchema,
+  createSearchTextInputSchema,
+} from "../../src/tools/register-rhel-tools.js";
+import {
   buildGrepCommand,
   SearchTextService,
 } from "../../src/tools/search-text.js";
@@ -99,7 +103,7 @@ describe("RHEL command builders", () => {
     });
     const rendered = renderCommand(command);
 
-    expect(command.args.slice(-3)).toEqual(["--", "'; uname -a; '", "/var/log/app"]);
+    expect(command.args.slice(-4)).toEqual(["--", "'; uname -a; '", "{}", "+"]);
     expect(rendered).toContain("''\\''; uname -a; '\\''' ");
   });
 
@@ -118,12 +122,15 @@ describe("RHEL command builders", () => {
       executable: "/usr/bin/find",
       args: [
         "/var/log/app",
+        "-maxdepth",
+        "8",
         "-type",
         "f",
         "-name",
         "*.log.gz",
         "-exec",
         "/usr/bin/zgrep",
+        "--binary-files=without-match",
         "--line-number",
         "--with-filename",
         "--no-messages",
@@ -135,6 +142,72 @@ describe("RHEL command builders", () => {
         "+",
       ],
     });
+  });
+
+  it.each([
+    ["none", "/usr/bin/grep"],
+    ["gzip", "/usr/bin/zgrep"],
+    ["bzip2", "/usr/bin/bzgrep"],
+    ["xz", "/usr/bin/xzgrep"],
+  ] as const)("%s検索で固定executableだけを使う", (compression, executable) => {
+    const command = buildGrepCommand({
+      root: "/var/log/app",
+      query: "--include=*",
+      mode: "literal",
+      caseSensitive: true,
+      compression,
+      limit: 10,
+    });
+
+    expect(command.executable).toBe("/usr/bin/find");
+    expect(command.args).toContain(executable);
+    expect(command.args.slice(-4)).toEqual(["--", "--include=*", "{}", "+"]);
+  });
+
+  it("findの日時・size・除外条件を固定argvへ配置する", () => {
+    const command = buildFindCommand({
+      root: "/var/log",
+      nameGlob: "*.LOG",
+      caseInsensitiveName: true,
+      type: "file",
+      modifiedAfter: "2026-08-10T00:00:00Z",
+      modifiedBefore: "2026-08-11T00:00:00Z",
+      minSizeBytes: 1_024,
+      maxSizeBytes: 2_048,
+      excludePathGlobs: ["*/archive/*"],
+      maxDepth: 4,
+      limit: 10,
+    });
+
+    expect(command.args).toEqual([
+      "/var/log", "-maxdepth", "4", "-type", "f", "-iname", "*.LOG",
+      "-newermt", "2026-08-10T00:00:00Z", "-not", "-newermt", "2026-08-11T00:00:00Z",
+      "-size", "+1023c", "-size", "-2049c", "-not", "-path", "*/archive/*", "-print0",
+    ]);
+  });
+});
+
+describe("RHEL tool input schemas", () => {
+  it("逆転した日時・size範囲を拒否する", () => {
+    const schema = createFindFilesInputSchema(100);
+
+    expect(() => schema.parse({
+      root: "/var/log",
+      modifiedAfter: "2026-08-11T00:00:00Z",
+      modifiedBefore: "2026-08-10T00:00:00Z",
+    })).toThrow(/modifiedBefore/);
+    expect(() => schema.parse({ root: "/var/log", minSizeBytes: 2, maxSizeBytes: 1 })).toThrow(/maxSizeBytes/);
+  });
+
+  it("file名だけの検索とcontext指定を同時に許可しない", () => {
+    const schema = createSearchTextInputSchema(100);
+
+    expect(() => schema.parse({
+      root: "/var/log",
+      query: "ERROR",
+      filesWithMatchesOnly: true,
+      contextBefore: 1,
+    })).toThrow(/context/);
   });
 
   it("system情報種別を固定templateへ変換する", () => {
