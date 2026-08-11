@@ -1,6 +1,8 @@
 import { McpServer } from "@modelcontextprotocol/server";
 
 import { registerCloudWatchTools } from "./aws/register-cloudwatch-tools.js";
+import { registerCloudFormationTools } from "./aws/register-cloudformation-tools.js";
+import type { CloudFormationService } from "./aws/cloudformation.js";
 import type { CloudWatchService } from "./aws/cloudwatch.js";
 import { registerCloudWatchLogsTools } from "./aws/register-cloudwatch-logs-tools.js";
 import type { CloudWatchLogsService } from "./aws/cloudwatch-logs.js";
@@ -21,6 +23,7 @@ export interface ServerDependencies {
   sftpInspector: SftpInspector;
   rhel: RhelToolDependencies;
   cloudWatch: CloudWatchService;
+  cloudFormation: CloudFormationService;
   cloudWatchLogs: CloudWatchLogsService;
   s3: S3Service;
   dynamodb: DynamoDbService;
@@ -53,6 +56,7 @@ export function createServer(config: AppConfig, dependencies: ServerDependencies
   registerSftpTools(server, dependencies.sftpInspector, config);
   registerRhelTools(server, dependencies.rhel, config);
   registerCloudWatchTools(server, dependencies.cloudWatch);
+  registerCloudFormationTools(server, dependencies.cloudFormation);
   registerCloudWatchLogsTools(server, dependencies.cloudWatchLogs);
   registerS3Tools(server, dependencies.s3);
   registerDynamoDbTools(server, dependencies.dynamodb);

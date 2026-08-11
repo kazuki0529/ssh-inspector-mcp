@@ -55,6 +55,7 @@ private key認証ではlocal key fileを0600以下にします。暗号化keyの
 |---|---|
 | SSH/SFTP | `ssh_health_check`, `ssh_list_directory`, `ssh_get_file_metadata`, `ssh_read_file_head`, `ssh_read_file_range`, `ssh_read_file_tail` |
 | RHEL | `ssh_find_files`, `ssh_search_text`, `ssh_system_info` |
+| CloudFormation | `aws_cloudformation_describe_stacks`, `aws_cloudformation_describe_stack_events`, `aws_cloudformation_list_stack_resources`, `aws_cloudformation_describe_stack_resource` |
 | CloudWatch | `aws_cloudwatch_describe_alarms`, `aws_cloudwatch_list_metrics`, `aws_cloudwatch_get_metric_data` |
 | CloudWatch Logs metadata | `aws_cloudwatch_logs_describe_log_groups`, `aws_cloudwatch_logs_describe_log_streams` |
 | CloudWatch Logs data | `aws_cloudwatch_logs_filter_log_events`, `aws_cloudwatch_logs_get_log_events` |
@@ -64,6 +65,8 @@ private key認証ではlocal key fileを0600以下にします。暗号化keyの
 | DynamoDB data | `aws_dynamodb_get_item`, `aws_dynamodb_query` |
 
 AWS resourceとregionの参照可否はSSH先のIAM policyで制御します。S3 data toolはIAMで参照可能な無圧縮UTF-8 textだけをbyte rangeで取得します。CloudWatch Logsは最大24時間・100 events、DynamoDB queryは最大100 itemsに制限し、DynamoDB `scan` は標準toolとして公開しません。data toolsのauto-approveは推奨しません。
+
+CloudFormation toolsはstack status、event、resource metadataだけを返し、stack Parameters、Outputs、Tags、template本文を除去します。eventはresource status、logical ID、時間帯で絞り込み、1回最大100件と`nextToken`で参照します。secret-safe shapingを迂回させないため、CloudFormationは宣言的AWS拡張serviceには追加していません。
 
 `ssh_get_file_metadata` は `allowedListRoots` 内のcanonical path、type、size、mtime、modeを本文なしで返します。`ssh_read_file_range` は `allowedReadRoots` 内のUTF-8 textを1始まりのline番号で取得し、`limits.maxReadScanBytes`（既定8 MiB）より後まで無制限に走査しません。
 
@@ -106,6 +109,10 @@ AWS resourceとregionの参照可否はSSH先のIAM policyで制御します。S
         "ssh_find_files",
         "ssh_search_text",
         "ssh_system_info",
+        "aws_cloudformation_describe_stacks",
+        "aws_cloudformation_describe_stack_events",
+        "aws_cloudformation_list_stack_resources",
+        "aws_cloudformation_describe_stack_resource",
         "aws_cloudwatch_describe_alarms",
         "aws_cloudwatch_list_metrics",
         "aws_cloudwatch_get_metric_data",

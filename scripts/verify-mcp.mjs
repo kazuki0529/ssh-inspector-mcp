@@ -7,6 +7,10 @@ import { Client } from "@modelcontextprotocol/client";
 import { StdioClientTransport } from "@modelcontextprotocol/client/stdio";
 
 const expectedTools = [
+  "aws_cloudformation_describe_stack_events",
+  "aws_cloudformation_describe_stack_resource",
+  "aws_cloudformation_describe_stacks",
+  "aws_cloudformation_list_stack_resources",
   "aws_cloudwatch_describe_alarms",
   "aws_cloudwatch_get_metric_data",
   "aws_cloudwatch_list_metrics",
