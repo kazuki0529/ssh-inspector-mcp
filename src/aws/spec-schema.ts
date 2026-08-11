@@ -31,7 +31,7 @@ export const awsToolSpecSchema = z
   .object({
     name: z.string().regex(/^[a-z][a-z0-9_]{0,63}$/),
     description: z.string().min(1).max(1024),
-    service: z.enum(["cloudwatch", "dynamodb", "ec2", "logs", "rds", "s3api"]),
+    service: z.enum(["cloudformation", "cloudwatch", "dynamodb", "ec2", "logs", "rds", "s3api"]),
     operation: z.string().regex(/^[a-z][a-z0-9-]{0,63}$/),
     region: z.string().regex(/^[a-z]{2}(?:-gov)?-[a-z]+-\d$/),
     fixedArgs: z.record(cliNameSchema, fixedValueSchema).default({}),
@@ -78,6 +78,7 @@ export type AwsToolSpec = z.infer<typeof awsToolSpecSchema>;
  */
 export function isReadOnlyOperation(service: AwsToolSpec["service"], operation: string): boolean {
   const prefixes: Record<AwsToolSpec["service"], readonly string[]> = {
+    cloudformation: ["describe-", "list-"],
     cloudwatch: ["describe-", "get-", "list-"],
     dynamodb: ["batch-get-", "describe-", "get-", "list-", "query", "scan"],
     ec2: ["describe-", "get-"],
