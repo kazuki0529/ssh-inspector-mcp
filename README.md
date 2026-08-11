@@ -65,7 +65,7 @@ private key認証ではlocal key fileを0600以下にします。暗号化keyの
 
 AWS resourceとregionの参照可否はSSH先のIAM policyで制御します。S3 data toolはIAMで参照可能な無圧縮UTF-8 textだけをbyte rangeで取得します。CloudWatch Logsは最大24時間・100 events、DynamoDB queryは最大100 itemsに制限し、DynamoDB `scan` は標準toolとして公開しません。data toolsのauto-approveは推奨しません。
 
-`ssh_find_files` の `modifiedAfter` はtimezone付きISO 8601日時を受け取り、固定した `find -newermt` 条件として扱います。`ssh_search_text` の `compression` は `none`、`gzip`、`bzip2`、`xz` を選択でき、圧縮時の既定globはそれぞれ `*.gz`、`*.bz2`、`*.xz` です。`includeGlob` で対象名をさらに限定できます。
+`ssh_find_files` はtimezone付きISO 8601の `modifiedAfter` / `modifiedBefore`、size範囲、case-insensitiveなfile名、最大20個の除外path globで対象を絞れます。`ssh_search_text` は `none`、`gzip`、`bzip2`、`xz` を選択でき、圧縮時の既定globはそれぞれ `*.gz`、`*.bz2`、`*.xz` です。最大depth、更新期間、最大20個の除外glob、前後各5行のcontext、file名だけの結果を指定できます。すべて固定した `find -exec` templateを使い、利用者指定commandは実行しません。
 
 `aws_cloudwatch_logs_describe_log_groups` は `logGroupNamePrefix` または `logGroupNamePattern` でlog groupを最大50件検索します。両条件は同時指定できず、続きは `nextToken` で取得します。
 

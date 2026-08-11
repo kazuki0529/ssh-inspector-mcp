@@ -17,6 +17,13 @@ export interface SearchTextInput {
   caseSensitive: boolean;
   compression?: SearchCompression | undefined;
   includeGlob?: string | undefined;
+  excludeGlobs?: readonly string[] | undefined;
+  contextBefore?: number | undefined;
+  contextAfter?: number | undefined;
+  maxDepth?: number | undefined;
+  modifiedAfter?: string | undefined;
+  modifiedBefore?: string | undefined;
+  filesWithMatchesOnly?: boolean | undefined;
   limit: number;
 }
 
@@ -35,33 +42,11 @@ export interface SearchTextResult {
  * @returns 固定executableとargv
  */
 export function buildGrepCommand(input: SearchTextInput): RemoteCommand {
-  if (input.compression !== undefined && input.compression !== "none") {
-    return buildCompressedGrepCommand(input, input.compression);
-  }
-
-  const args = [
-    "--recursive",
-    "--directories=recurse",
-    "--devices=skip",
-    "--binary-files=without-match",
-    "--line-number",
-    "--with-filename",
-    "--no-messages",
-    input.mode === "literal" ? "--fixed-strings" : "--extended-regexp",
-  ];
-
-  if (!input.caseSensitive) {
-    args.push("--ignore-case");
-  }
-  if (input.includeGlob !== undefined) {
-    args.push(`--include=${input.includeGlob}`);
-  }
-  args.push("--", input.query, input.root);
-
-  return { executable: "/usr/bin/grep", args };
+  return buildFindGrepCommand(input, input.compression ?? "none");
 }
 
 const compressedGrepSettings = {
+  none: { executable: "/usr/bin/grep", defaultGlob: undefined },
   gzip: { executable: "/usr/bin/zgrep", defaultGlob: "*.gz" },
   bzip2: { executable: "/usr/bin/bzgrep", defaultGlob: "*.bz2" },
   xz: { executable: "/usr/bin/xzgrep", defaultGlob: "*.xz" },
@@ -74,27 +59,50 @@ const compressedGrepSettings = {
  * @param compression 圧縮形式
  * @returns shell pipelineを使わない固定find command
  */
-function buildCompressedGrepCommand(
+function buildFindGrepCommand(
   input: SearchTextInput,
-  compression: Exclude<SearchCompression, "none">,
+  compression: SearchCompression,
 ): RemoteCommand {
   const settings = compressedGrepSettings[compression];
   const args = [
     input.root,
+    "-maxdepth",
+    String(input.maxDepth ?? 8),
     "-type",
     "f",
-    "-name",
-    input.includeGlob ?? settings.defaultGlob,
+  ];
+
+  const includeGlob = input.includeGlob ?? settings.defaultGlob;
+  if (includeGlob !== undefined) {
+    args.push("-name", includeGlob);
+  }
+  for (const excludedGlob of input.excludeGlobs ?? []) {
+    args.push("-not", "-path", excludedGlob);
+  }
+  if (input.modifiedAfter !== undefined) {
+    args.push("-newermt", input.modifiedAfter);
+  }
+  if (input.modifiedBefore !== undefined) {
+    args.push("-not", "-newermt", input.modifiedBefore);
+  }
+
+  args.push(
     "-exec",
     settings.executable,
-    "--line-number",
+    "--binary-files=without-match",
+    input.filesWithMatchesOnly === true ? "--files-with-matches" : "--line-number",
     "--with-filename",
     "--no-messages",
     input.mode === "literal" ? "--fixed-strings" : "--extended-regexp",
-  ];
-
+  );
   if (!input.caseSensitive) {
     args.push("--ignore-case");
+  }
+  if ((input.contextBefore ?? 0) > 0) {
+    args.push("--before-context", String(input.contextBefore));
+  }
+  if ((input.contextAfter ?? 0) > 0) {
+    args.push("--after-context", String(input.contextAfter));
   }
   args.push("--", input.query, "{}", "+");
 
