@@ -67,6 +67,7 @@ export const appConfigSchema = z
         maxConcurrentOperations: z.number().int().min(1).max(16).default(4),
         maxResults: z.number().int().min(1).max(5_000).default(500),
         maxReadLines: z.number().int().min(1).max(10_000).default(500),
+        maxReadScanBytes: z.number().int().min(1_024).max(67_108_864).default(8_388_608),
       })
       .strict()
       .prefault({}),
