@@ -44,6 +44,15 @@ export function registerSftpTools(
       executeTool(async () => inspector.listDirectory(path, includeHidden, limit)),
   );
 
+  server.registerTool(
+    "ssh_get_file_metadata",
+    {
+      description: "許可list root内のcanonical path、type、size、mtime、modeを本文なしで返します。",
+      inputSchema: z.object({ path: z.string().min(1).max(4096).startsWith("/") }).strict(),
+    },
+    async ({ path }) => executeTool(async () => inspector.getFileMetadata(path)),
+  );
+
   const readInput = z
     .object({
       path: z.string().min(1).max(4096).startsWith("/"),
@@ -67,5 +76,20 @@ export function registerSftpTools(
       inputSchema: readInput,
     },
     async ({ path, lines }) => executeTool(async () => inspector.readTail(path, lines)),
+  );
+
+  server.registerTool(
+    "ssh_read_file_range",
+    {
+      description: "許可root内のUTF-8 text fileをbounded scanし、1始まりの指定line範囲を返します。",
+      inputSchema: z
+        .object({
+          path: z.string().min(1).max(4096).startsWith("/"),
+          startLine: z.number().int().min(1).max(1_000_000),
+          lines: z.number().int().min(1).max(config.limits.maxReadLines).default(100),
+        })
+        .strict(),
+    },
+    async ({ path, startLine, lines }) => executeTool(async () => inspector.readRange(path, startLine, lines)),
   );
 }

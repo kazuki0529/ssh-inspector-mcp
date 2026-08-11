@@ -11,8 +11,13 @@ export type FindFileType = "any" | "directory" | "file";
 export interface FindFilesInput {
   root: string;
   nameGlob?: string | undefined;
+  caseInsensitiveName?: boolean | undefined;
   type: FindFileType;
   modifiedAfter?: string | undefined;
+  modifiedBefore?: string | undefined;
+  minSizeBytes?: number | undefined;
+  maxSizeBytes?: number | undefined;
+  excludePathGlobs?: readonly string[] | undefined;
   maxDepth: number;
   limit: number;
 }
@@ -40,10 +45,22 @@ export function buildFindCommand(input: FindFilesInput): RemoteCommand {
     args.push("-type", "d");
   }
   if (input.nameGlob !== undefined) {
-    args.push("-name", input.nameGlob);
+    args.push(input.caseInsensitiveName === true ? "-iname" : "-name", input.nameGlob);
   }
   if (input.modifiedAfter !== undefined) {
     args.push("-newermt", input.modifiedAfter);
+  }
+  if (input.modifiedBefore !== undefined) {
+    args.push("-not", "-newermt", input.modifiedBefore);
+  }
+  if (input.minSizeBytes !== undefined && input.minSizeBytes > 0) {
+    args.push("-size", `+${String(input.minSizeBytes - 1)}c`);
+  }
+  if (input.maxSizeBytes !== undefined) {
+    args.push("-size", `-${String(input.maxSizeBytes + 1)}c`);
+  }
+  for (const excludedPath of input.excludePathGlobs ?? []) {
+    args.push("-not", "-path", excludedPath);
   }
   args.push("-print0");
 

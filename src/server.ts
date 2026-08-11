@@ -3,6 +3,8 @@ import { McpServer } from "@modelcontextprotocol/server";
 import { registerCodePipelineTools } from "./aws/register-codepipeline-tools.js";
 import type { CodePipelineService } from "./aws/codepipeline.js";
 import { registerCloudWatchTools } from "./aws/register-cloudwatch-tools.js";
+import { registerCloudFormationTools } from "./aws/register-cloudformation-tools.js";
+import type { CloudFormationService } from "./aws/cloudformation.js";
 import type { CloudWatchService } from "./aws/cloudwatch.js";
 import { registerCloudWatchLogsTools } from "./aws/register-cloudwatch-logs-tools.js";
 import type { CloudWatchLogsService } from "./aws/cloudwatch-logs.js";
@@ -24,6 +26,7 @@ export interface ServerDependencies {
   rhel: RhelToolDependencies;
   codePipeline: CodePipelineService;
   cloudWatch: CloudWatchService;
+  cloudFormation: CloudFormationService;
   cloudWatchLogs: CloudWatchLogsService;
   s3: S3Service;
   dynamodb: DynamoDbService;
@@ -57,6 +60,7 @@ export function createServer(config: AppConfig, dependencies: ServerDependencies
   registerRhelTools(server, dependencies.rhel, config);
   registerCodePipelineTools(server, dependencies.codePipeline);
   registerCloudWatchTools(server, dependencies.cloudWatch);
+  registerCloudFormationTools(server, dependencies.cloudFormation);
   registerCloudWatchLogsTools(server, dependencies.cloudWatchLogs);
   registerS3Tools(server, dependencies.s3);
   registerDynamoDbTools(server, dependencies.dynamodb);

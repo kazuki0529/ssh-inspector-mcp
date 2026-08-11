@@ -53,9 +53,10 @@ private key認証ではlocal key fileを0600以下にします。暗号化keyの
 
 | 分類 | tools |
 |---|---|
-| SSH/SFTP | `ssh_health_check`, `ssh_list_directory`, `ssh_read_file_head`, `ssh_read_file_tail` |
+| SSH/SFTP | `ssh_health_check`, `ssh_list_directory`, `ssh_get_file_metadata`, `ssh_read_file_head`, `ssh_read_file_range`, `ssh_read_file_tail` |
 | RHEL | `ssh_find_files`, `ssh_search_text`, `ssh_system_info` |
 | CodePipeline | `aws_codepipeline_list_pipelines`, `aws_codepipeline_get_pipeline_state`, `aws_codepipeline_list_pipeline_executions`, `aws_codepipeline_get_pipeline_execution`, `aws_codepipeline_list_action_executions` |
+| CloudFormation | `aws_cloudformation_describe_stacks`, `aws_cloudformation_describe_stack_events`, `aws_cloudformation_list_stack_resources`, `aws_cloudformation_describe_stack_resource` |
 | CloudWatch | `aws_cloudwatch_describe_alarms`, `aws_cloudwatch_list_metrics`, `aws_cloudwatch_get_metric_data` |
 | CloudWatch Logs metadata | `aws_cloudwatch_logs_describe_log_groups`, `aws_cloudwatch_logs_describe_log_streams` |
 | CloudWatch Logs data | `aws_cloudwatch_logs_filter_log_events`, `aws_cloudwatch_logs_get_log_events` |
@@ -68,7 +69,11 @@ AWS resourceとregionの参照可否はSSH先のIAM policyで制御します。S
 
 CodePipeline toolsは1回100件までとし、pipeline/action execution ID、status、error、外部execution IDを保持します。action configuration、artifact location、output variables、token、URLは結果から除外します。`aws_codepipeline_list_pipeline_executions` の `mode` は最新1件、失敗、全件のboundedな絞り込みを指定できます。secret-safe shapingを迂回させないため、CodePipelineは宣言的AWS拡張serviceには追加していません。
 
-`ssh_find_files` の `modifiedAfter` はtimezone付きISO 8601日時を受け取り、固定した `find -newermt` 条件として扱います。`ssh_search_text` の `compression` は `none`、`gzip`、`bzip2`、`xz` を選択でき、圧縮時の既定globはそれぞれ `*.gz`、`*.bz2`、`*.xz` です。`includeGlob` で対象名をさらに限定できます。
+CloudFormation toolsはstack status、event、resource metadataだけを返し、stack Parameters、Outputs、Tags、template本文を除去します。eventはresource status、logical ID、時間帯で絞り込み、1回最大100件と`nextToken`で参照します。secret-safe shapingを迂回させないため、CloudFormationは宣言的AWS拡張serviceには追加していません。
+
+`ssh_get_file_metadata` は `allowedListRoots` 内のcanonical path、type、size、mtime、modeを本文なしで返します。`ssh_read_file_range` は `allowedReadRoots` 内のUTF-8 textを1始まりのline番号で取得し、`limits.maxReadScanBytes`（既定8 MiB）より後まで無制限に走査しません。
+
+`ssh_find_files` はtimezone付きISO 8601の `modifiedAfter` / `modifiedBefore`、size範囲、case-insensitiveなfile名、最大20個の除外path globで対象を絞れます。`ssh_search_text` は `none`、`gzip`、`bzip2`、`xz` を選択でき、圧縮時の既定globはそれぞれ `*.gz`、`*.bz2`、`*.xz` です。最大depth、更新期間、最大20個の除外glob、前後各5行のcontext、file名だけの結果を指定できます。すべて固定した `find -exec` templateを使い、利用者指定commandは実行しません。
 
 `aws_cloudwatch_logs_describe_log_groups` は `logGroupNamePrefix` または `logGroupNamePattern` でlog groupを最大50件検索します。両条件は同時指定できず、続きは `nextToken` で取得します。
 
@@ -100,7 +105,9 @@ CodePipeline toolsは1回100件までとし、pipeline/action execution ID、sta
       "autoApprove": [
         "ssh_health_check",
         "ssh_list_directory",
+        "ssh_get_file_metadata",
         "ssh_read_file_head",
+        "ssh_read_file_range",
         "ssh_read_file_tail",
         "ssh_find_files",
         "ssh_search_text",
@@ -110,6 +117,10 @@ CodePipeline toolsは1回100件までとし、pipeline/action execution ID、sta
         "aws_codepipeline_list_pipeline_executions",
         "aws_codepipeline_get_pipeline_execution",
         "aws_codepipeline_list_action_executions",
+        "aws_cloudformation_describe_stacks",
+        "aws_cloudformation_describe_stack_events",
+        "aws_cloudformation_list_stack_resources",
+        "aws_cloudformation_describe_stack_resource",
         "aws_cloudwatch_describe_alarms",
         "aws_cloudwatch_list_metrics",
         "aws_cloudwatch_get_metric_data",

@@ -7,6 +7,10 @@ import { Client } from "@modelcontextprotocol/client";
 import { StdioClientTransport } from "@modelcontextprotocol/client/stdio";
 
 const expectedTools = [
+  "aws_cloudformation_describe_stack_events",
+  "aws_cloudformation_describe_stack_resource",
+  "aws_cloudformation_describe_stacks",
+  "aws_cloudformation_list_stack_resources",
   "aws_codepipeline_get_pipeline_execution",
   "aws_codepipeline_get_pipeline_state",
   "aws_codepipeline_list_action_executions",
@@ -28,9 +32,11 @@ const expectedTools = [
   "aws_s3_list_buckets",
   "aws_s3_list_objects",
   "ssh_find_files",
+  "ssh_get_file_metadata",
   "ssh_health_check",
   "ssh_list_directory",
   "ssh_read_file_head",
+  "ssh_read_file_range",
   "ssh_read_file_tail",
   "ssh_search_text",
   "ssh_system_info",

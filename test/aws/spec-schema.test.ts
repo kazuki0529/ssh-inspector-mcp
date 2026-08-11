@@ -37,6 +37,13 @@ describe("awsToolSpecFileSchema", () => {
     expect(() => awsToolSpecFileSchema.parse({ version: 1, tools: [{ ...tool, operation: "run-instances" }] })).toThrow(/read-only/);
   });
 
+  it("secret shapingを迂回するCloudFormation extensionを拒否する", () => {
+    expect(() => awsToolSpecFileSchema.parse({
+      version: 1,
+      tools: [{ ...tool, service: "cloudformation", operation: "describe-stacks" }],
+    })).toThrow();
+  });
+
   it("DynamoDB scanに最大100の必須limitを要求する", () => {
     const scanTool = {
       ...tool,

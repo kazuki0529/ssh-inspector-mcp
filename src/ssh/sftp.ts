@@ -18,6 +18,9 @@ export interface RemoteDirectoryEntry {
 export interface RemoteFileStat {
   size: number;
   isFile: boolean;
+  type?: RemoteFileType | undefined;
+  modifiedAt?: string | undefined;
+  mode?: string | undefined;
 }
 
 /** SFTP操作が中断されたことを表します。 */
@@ -97,6 +100,9 @@ export class Ssh2RemoteFileSystem implements RemoteFileSystem {
     return {
       size: stats.size,
       isFile: stats.isFile(),
+      type: detectFileType(stats),
+      modifiedAt: new Date(stats.mtime * 1_000).toISOString(),
+      mode: (stats.mode & 0o7777).toString(8).padStart(4, "0"),
     };
   }
 
