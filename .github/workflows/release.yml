@@ -35,19 +35,23 @@ jobs:
       - name: Verify and build
         run: npm run verify
 
-      - name: Create release archive
+      - name: Create release assets
         id: archive
         env:
           RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: |
           safe_tag="${RELEASE_TAG//\//-}"
           archive="ssh-inspector-mcp-${safe_tag}.zip"
+          checksum="${archive}.sha256"
           zip -j "$archive" dist/ssh-inspector-mcp.mjs
-          echo "path=$archive" >> "$GITHUB_OUTPUT"
+          sha256sum "$archive" > "$checksum"
+          echo "archive_path=$archive" >> "$GITHUB_OUTPUT"
+          echo "checksum_path=$checksum" >> "$GITHUB_OUTPUT"
 
-      - name: Upload release asset
+      - name: Upload release assets
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ github.event.release.tag_name }}
-          ASSET_PATH: ${{ steps.archive.outputs.path }}
-        run: gh release upload "$RELEASE_TAG" "$ASSET_PATH" --clobber
+          ARCHIVE_PATH: ${{ steps.archive.outputs.archive_path }}
+          CHECKSUM_PATH: ${{ steps.archive.outputs.checksum_path }}
+        run: gh release upload "$RELEASE_TAG" "$ARCHIVE_PATH" "$CHECKSUM_PATH" --clobber
