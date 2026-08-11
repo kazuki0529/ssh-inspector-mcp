@@ -1,7 +1,7 @@
 import type { RemoteCommand } from "../execution/render-command.js";
 
 /** 固定builderが許可するAWS serviceです。 */
-export type AllowedAwsService = "cloudformation" | "cloudwatch" | "codepipeline" | "dynamodb" | "ec2" | "logs" | "rds" | "s3api";
+export type AllowedAwsService = "cloudformation" | "cloudwatch" | "codebuild" | "codepipeline" | "dynamodb" | "ec2" | "logs" | "rds" | "s3api";
 
 /** AWS CLI parameterの安全な値型です。 */
 export type AwsParameterValue = boolean | number | string | readonly string[] | object;

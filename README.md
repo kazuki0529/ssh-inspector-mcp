@@ -55,6 +55,7 @@ private key認証ではlocal key fileを0600以下にします。暗号化keyの
 |---|---|
 | SSH/SFTP | `ssh_health_check`, `ssh_list_directory`, `ssh_get_file_metadata`, `ssh_read_file_head`, `ssh_read_file_range`, `ssh_read_file_tail` |
 | RHEL | `ssh_find_files`, `ssh_search_text`, `ssh_system_info` |
+| CodeBuild | `aws_codebuild_list_projects`, `aws_codebuild_batch_get_projects`, `aws_codebuild_list_builds_for_project`, `aws_codebuild_batch_get_builds` |
 | CodePipeline | `aws_codepipeline_list_pipelines`, `aws_codepipeline_get_pipeline_state`, `aws_codepipeline_list_pipeline_executions`, `aws_codepipeline_get_pipeline_execution`, `aws_codepipeline_list_action_executions` |
 | CloudFormation | `aws_cloudformation_describe_stacks`, `aws_cloudformation_describe_stack_events`, `aws_cloudformation_list_stack_resources`, `aws_cloudformation_describe_stack_resource` |
 | CloudWatch | `aws_cloudwatch_describe_alarms`, `aws_cloudwatch_list_metrics`, `aws_cloudwatch_get_metric_data` |
@@ -66,6 +67,8 @@ private key認証ではlocal key fileを0600以下にします。暗号化keyの
 | DynamoDB data | `aws_dynamodb_get_item`, `aws_dynamodb_query` |
 
 AWS resourceとregionの参照可否はSSH先のIAM policyで制御します。S3 data toolはIAMで参照可能な無圧縮UTF-8 textだけをbyte rangeで取得します。CloudWatch Logsは最大24時間・100 events、DynamoDB queryは最大100 itemsに制限し、DynamoDB `scan` は標準toolとして公開しません。data toolsのauto-approveは推奨しません。
+
+CodeBuild toolsはproject/build IDを1回100件までに制限し、build status、phase context、source version、CloudWatch Logsのgroup/streamを返します。環境変数はname/typeだけを保持し、値、registry credential、artifact location、exported variable、debug tokenは結果から除外します。secret-safe shapingを迂回させないため、CodeBuildは宣言的AWS拡張serviceには追加していません。
 
 CodePipeline toolsは1回100件までとし、pipeline/action execution ID、status、error、外部execution IDを保持します。action configuration、artifact location、output variables、token、URLは結果から除外します。`aws_codepipeline_list_pipeline_executions` の `mode` は最新1件、失敗、全件のboundedな絞り込みを指定できます。secret-safe shapingを迂回させないため、CodePipelineは宣言的AWS拡張serviceには追加していません。
 
@@ -112,6 +115,10 @@ CloudFormation toolsはstack status、event、resource metadataだけを返し�
         "ssh_find_files",
         "ssh_search_text",
         "ssh_system_info",
+        "aws_codebuild_list_projects",
+        "aws_codebuild_batch_get_projects",
+        "aws_codebuild_list_builds_for_project",
+        "aws_codebuild_batch_get_builds",
         "aws_codepipeline_list_pipelines",
         "aws_codepipeline_get_pipeline_state",
         "aws_codepipeline_list_pipeline_executions",
