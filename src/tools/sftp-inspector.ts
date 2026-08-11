@@ -3,7 +3,7 @@ import { TextDecoder } from "node:util";
 import type { AppConfig } from "../config/schema.js";
 import type { SftpSessionProvider } from "../ssh/client.js";
 import { RemotePathPolicy } from "../ssh/path-policy.js";
-import type { RemoteDirectoryEntry, RemoteFileSystem } from "../ssh/sftp.js";
+import type { RemoteDirectoryEntry, RemoteFileSystem, RemoteFileType } from "../ssh/sftp.js";
 
 /** directory listing結果です。 */
 export interface DirectoryListing {
@@ -18,6 +18,23 @@ export interface FileSegment {
   text: string;
   bytesRead: number;
   truncated: boolean;
+}
+
+/** canonical pathで取得したfile metadataです。 */
+export interface FileMetadata {
+  requestedPath: string;
+  path: string;
+  symlinkResolved: boolean;
+  type: RemoteFileType;
+  size: number;
+  modifiedAt: string | null;
+  mode: string | null;
+}
+
+/** bounded line range参照結果です。 */
+export interface FileLineRange extends FileSegment {
+  startLine: number;
+  linesRead: number;
 }
 
 /**
@@ -75,6 +92,30 @@ export class SftpInspector {
   }
 
   /**
+   * 許可list root内のpathをcanonicalizeし、本文を含まないmetadataを返します。
+   *
+   * @param path metadata取得対象
+   * @returns canonical pathと安定したstat情報
+   */
+  public async getFileMetadata(path: string): Promise<FileMetadata> {
+    return this.#sessions.withSftp(async (fileSystem) => {
+      const policy = await this.#createPathPolicy(fileSystem);
+      const canonicalPath = await policy.resolveListPath(path);
+      const stat = await fileSystem.stat(canonicalPath);
+
+      return {
+        requestedPath: path,
+        path: canonicalPath,
+        symlinkResolved: path !== canonicalPath,
+        type: stat.type ?? (stat.isFile ? "file" : "other"),
+        size: stat.size,
+        modifiedAt: stat.modifiedAt ?? null,
+        mode: stat.mode ?? null,
+      };
+    });
+  }
+
+  /**
    * 許可root内のtext file先頭をline/byte上限内で返します。
    *
    * @param path 対象remote file
@@ -94,6 +135,47 @@ export class SftpInspector {
    */
   public async readTail(path: string, lines: number): Promise<FileSegment> {
     return this.#readSegment(path, lines, "tail");
+  }
+
+  /**
+   * 許可read root内のtext fileを先頭からbounded scanし、指定line範囲を返します。
+   *
+   * @param path 対象remote file
+   * @param startLine 1始まりの開始line
+   * @param lines 最大line数
+   * @returns bounded line range
+   */
+  public async readRange(path: string, startLine: number, lines: number): Promise<FileLineRange> {
+    return this.#sessions.withSftp(async (fileSystem, signal) => {
+      const policy = await this.#createPathPolicy(fileSystem);
+      const canonicalPath = await policy.resolveReadPath(path);
+      const fileStat = await fileSystem.stat(canonicalPath);
+
+      if (!fileStat.isFile) {
+        throw new Error("通常fileだけを本文参照できます");
+      }
+
+      const scanBytes = Math.min(fileStat.size, this.#config.limits.maxReadScanBytes);
+      const buffer = await fileSystem.readRange(canonicalPath, 0, scanBytes, signal);
+      const text = decodeUtf8Boundary(buffer, "head");
+      const allLines = splitLines(text);
+      const startIndex = startLine - 1;
+      if (startIndex >= allLines.length && fileStat.size > buffer.length) {
+        throw new Error("startLineが最大走査byte範囲内にありません");
+      }
+
+      const maximumLines = Math.min(lines, this.#config.limits.maxReadLines);
+      const selected = allLines.slice(startIndex, startIndex + maximumLines);
+
+      return {
+        path: canonicalPath,
+        text: selected.join(""),
+        bytesRead: buffer.length,
+        startLine,
+        linesRead: selected.length,
+        truncated: fileStat.size > buffer.length || startIndex + selected.length < allLines.length,
+      };
+    });
   }
 
   /**
@@ -188,10 +270,20 @@ export function selectLines(
   maximumLines: number,
   direction: "head" | "tail",
 ): string {
-  const matches = [...text.matchAll(/.*(?:\n|$)/gu)]
-    .map((match) => match[0])
-    .filter((line) => line.length > 0);
+  const matches = splitLines(text);
   const selected = direction === "head" ? matches.slice(0, maximumLines) : matches.slice(-maximumLines);
 
   return selected.join("");
+}
+
+/**
+ * 改行を保持したline配列へ分割します。
+ *
+ * @param text UTF-8 text
+ * @returns 空の終端matchを除いたline配列
+ */
+function splitLines(text: string): string[] {
+  return [...text.matchAll(/.*(?:\n|$)/gu)]
+    .map((match) => match[0])
+    .filter((line) => line.length > 0);
 }
