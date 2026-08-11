@@ -66,7 +66,7 @@ private key認証ではlocal key fileを0600以下にします。暗号化keyの
 
 AWS resourceとregionの参照可否はSSH先のIAM policyで制御します。S3 data toolはIAMで参照可能な無圧縮UTF-8 textだけをbyte rangeで取得します。CloudWatch Logsは最大24時間・100 events、DynamoDB queryは最大100 itemsに制限し、DynamoDB `scan` は標準toolとして公開しません。data toolsのauto-approveは推奨しません。
 
-CodePipeline toolsは1回100件までとし、pipeline/action execution ID、status、error、外部execution IDを保持します。action configuration、artifact location、output variables、token、URLは結果から除外します。`aws_codepipeline_list_pipeline_executions` の `mode` は最新1件、失敗、全件のboundedな絞り込みを指定できます。
+CodePipeline toolsは1回100件までとし、pipeline/action execution ID、status、error、外部execution IDを保持します。action configuration、artifact location、output variables、token、URLは結果から除外します。`aws_codepipeline_list_pipeline_executions` の `mode` は最新1件、失敗、全件のboundedな絞り込みを指定できます。secret-safe shapingを迂回させないため、CodePipelineは宣言的AWS拡張serviceには追加していません。
 
 `ssh_find_files` の `modifiedAfter` はtimezone付きISO 8601日時を受け取り、固定した `find -newermt` 条件として扱います。`ssh_search_text` の `compression` は `none`、`gzip`、`bzip2`、`xz` を選択でき、圧縮時の既定globはそれぞれ `*.gz`、`*.bz2`、`*.xz` です。`includeGlob` で対象名をさらに限定できます。
 

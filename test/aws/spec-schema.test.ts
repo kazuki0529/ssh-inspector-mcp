@@ -48,6 +48,13 @@ describe("awsToolSpecFileSchema", () => {
 
     expect(() => awsToolSpecFileSchema.parse({ version: 1, tools: [scanTool] })).toThrow(/必須limit/);
   });
+
+  it("secret shapingを迂回するCodePipeline extensionを拒否する", () => {
+    expect(() => awsToolSpecFileSchema.parse({
+      version: 1,
+      tools: [{ ...tool, service: "codepipeline", operation: "list-action-executions" }],
+    })).toThrow();
+  });
 });
 
 describe("loadAwsToolSpecs", () => {
