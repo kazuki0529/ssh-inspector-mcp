@@ -7,6 +7,10 @@ import { Client } from "@modelcontextprotocol/client";
 import { StdioClientTransport } from "@modelcontextprotocol/client/stdio";
 
 const expectedTools = [
+  "aws_codebuild_batch_get_builds",
+  "aws_codebuild_batch_get_projects",
+  "aws_codebuild_list_builds_for_project",
+  "aws_codebuild_list_projects",
   "aws_cloudwatch_describe_alarms",
   "aws_cloudwatch_get_metric_data",
   "aws_cloudwatch_list_metrics",

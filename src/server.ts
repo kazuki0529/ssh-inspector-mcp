@@ -1,5 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/server";
 
+import { registerCodeBuildTools } from "./aws/register-codebuild-tools.js";
+import type { CodeBuildService } from "./aws/codebuild.js";
 import { registerCloudWatchTools } from "./aws/register-cloudwatch-tools.js";
 import type { CloudWatchService } from "./aws/cloudwatch.js";
 import { registerCloudWatchLogsTools } from "./aws/register-cloudwatch-logs-tools.js";
@@ -20,6 +22,7 @@ import type { SftpInspector } from "./tools/sftp-inspector.js";
 export interface ServerDependencies {
   sftpInspector: SftpInspector;
   rhel: RhelToolDependencies;
+  codeBuild: CodeBuildService;
   cloudWatch: CloudWatchService;
   cloudWatchLogs: CloudWatchLogsService;
   s3: S3Service;
@@ -52,6 +55,7 @@ export function createServer(config: AppConfig, dependencies: ServerDependencies
 
   registerSftpTools(server, dependencies.sftpInspector, config);
   registerRhelTools(server, dependencies.rhel, config);
+  registerCodeBuildTools(server, dependencies.codeBuild);
   registerCloudWatchTools(server, dependencies.cloudWatch);
   registerCloudWatchLogsTools(server, dependencies.cloudWatchLogs);
   registerS3Tools(server, dependencies.s3);
