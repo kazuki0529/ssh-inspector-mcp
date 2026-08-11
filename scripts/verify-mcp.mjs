@@ -7,6 +7,11 @@ import { Client } from "@modelcontextprotocol/client";
 import { StdioClientTransport } from "@modelcontextprotocol/client/stdio";
 
 const expectedTools = [
+  "aws_codepipeline_get_pipeline_execution",
+  "aws_codepipeline_get_pipeline_state",
+  "aws_codepipeline_list_action_executions",
+  "aws_codepipeline_list_pipeline_executions",
+  "aws_codepipeline_list_pipelines",
   "aws_cloudwatch_describe_alarms",
   "aws_cloudwatch_get_metric_data",
   "aws_cloudwatch_list_metrics",

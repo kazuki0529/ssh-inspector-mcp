@@ -1,5 +1,6 @@
 import { StdioServerTransport } from "@modelcontextprotocol/server/stdio";
 
+import { CodePipelineCommandBuilder, CodePipelineService } from "./aws/codepipeline.js";
 import { CloudWatchCommandBuilder, CloudWatchService } from "./aws/cloudwatch.js";
 import {
   CloudWatchLogsCommandBuilder,
@@ -32,6 +33,7 @@ async function main(): Promise<void> {
       searchText: new SearchTextService(sshClient, sshClient, config),
       systemInfo: new SystemInfoService(sshClient, config),
     },
+    codePipeline: new CodePipelineService(sshClient, new CodePipelineCommandBuilder()),
     cloudWatch: new CloudWatchService(sshClient, new CloudWatchCommandBuilder()),
     cloudWatchLogs: new CloudWatchLogsService(
       sshClient,
