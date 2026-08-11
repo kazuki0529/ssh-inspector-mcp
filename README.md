@@ -66,7 +66,7 @@ private key認証ではlocal key fileを0600以下にします。暗号化keyの
 
 AWS resourceとregionの参照可否はSSH先のIAM policyで制御します。S3 data toolはIAMで参照可能な無圧縮UTF-8 textだけをbyte rangeで取得します。CloudWatch Logsは最大24時間・100 events、DynamoDB queryは最大100 itemsに制限し、DynamoDB `scan` は標準toolとして公開しません。data toolsのauto-approveは推奨しません。
 
-CloudFormation toolsはstack status、event、resource metadataだけを返し、stack Parameters、Outputs、Tags、template本文を除去します。eventはresource status、logical ID、時間帯で絞り込み、1回最大100件と`nextToken`で参照します。
+CloudFormation toolsはstack status、event、resource metadataだけを返し、stack Parameters、Outputs、Tags、template本文を除去します。eventはresource status、logical ID、時間帯で絞り込み、1回最大100件と`nextToken`で参照します。secret-safe shapingを迂回させないため、CloudFormationは宣言的AWS拡張serviceには追加していません。
 
 `ssh_find_files` の `modifiedAfter` はtimezone付きISO 8601日時を受け取り、固定した `find -newermt` 条件として扱います。`ssh_search_text` の `compression` は `none`、`gzip`、`bzip2`、`xz` を選択でき、圧縮時の既定globはそれぞれ `*.gz`、`*.bz2`、`*.xz` です。`includeGlob` で対象名をさらに限定できます。
 
