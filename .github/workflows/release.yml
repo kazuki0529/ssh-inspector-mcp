@@ -1,0 +1,53 @@
+name: Release
+
+on:
+  release:
+    types:
+      - published
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.event.release.tag_name }}
+  cancel-in-progress: false
+
+jobs:
+  build-and-upload:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout release tag
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.release.tag_name }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify and build
+        run: npm run verify
+
+      - name: Create release archive
+        id: archive
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          safe_tag="${RELEASE_TAG//\//-}"
+          archive="ssh-inspector-mcp-${safe_tag}.zip"
+          zip -j "$archive" dist/ssh-inspector-mcp.mjs
+          echo "path=$archive" >> "$GITHUB_OUTPUT"
+
+      - name: Upload release asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          ASSET_PATH: ${{ steps.archive.outputs.path }}
+        run: gh release upload "$RELEASE_TAG" "$ASSET_PATH" --clobber
