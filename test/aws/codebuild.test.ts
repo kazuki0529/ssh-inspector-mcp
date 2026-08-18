@@ -18,7 +18,7 @@ describe("CodeBuildCommandBuilder", () => {
       buildIds: [buildId],
     }));
 
-    expect(command.executable).toBe("/usr/bin/aws");
+    expect(command.executable).toBe("aws");
     expect(command.args.slice(0, 2)).toEqual(["codebuild", "batch-get-builds"]);
     expect(command.args).toContain("--ids");
     expect(command.args).toContain(buildId);

@@ -1,6 +1,6 @@
-/** SSH先で実行を許可するabsolute executable一覧です。 */
+/** SSH先で実行を許可するexecutable一覧です。 */
 export const ALLOWED_EXECUTABLES = [
-  "/usr/bin/aws",
+  "aws",
   "/usr/bin/df",
   "/usr/bin/find",
   "/usr/bin/free",
