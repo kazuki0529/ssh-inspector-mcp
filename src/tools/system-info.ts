@@ -34,25 +34,25 @@ export interface SystemInfoResult extends CommandExecutionResult {
 export function buildSystemInfoCommand(input: SystemInfoInput): RemoteCommand {
   switch (input.kind) {
     case "release":
-      return { executable: "/usr/bin/rpm", args: ["--eval", "%{rhel}"] };
+      return { executable: "rpm", args: ["--eval", "%{rhel}"] };
     case "kernel":
-      return { executable: "/usr/bin/uname", args: ["-a"] };
+      return { executable: "uname", args: ["-a"] };
     case "uptime":
-      return { executable: "/usr/bin/uptime", args: [] };
+      return { executable: "uptime", args: [] };
     case "filesystem":
-      return { executable: "/usr/bin/df", args: ["-hPT"] };
+      return { executable: "df", args: ["-hPT"] };
     case "memory":
-      return { executable: "/usr/bin/free", args: ["-b"] };
+      return { executable: "free", args: ["-b"] };
     case "processes":
       return {
-        executable: "/usr/bin/ps",
+        executable: "ps",
         args: ["-eo", "pid,ppid,user,stat,etimes,comm", "--sort=-etimes"],
       };
     case "package":
-      return { executable: "/usr/bin/rpm", args: ["-q", "--", input.packageName] };
+      return { executable: "rpm", args: ["-q", "--", input.packageName] };
     case "service":
       return {
-        executable: "/usr/bin/systemctl",
+        executable: "systemctl",
         args: ["status", "--no-pager", "--full", "--", input.unit],
       };
   }

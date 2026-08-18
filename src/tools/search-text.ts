@@ -36,7 +36,7 @@ export interface SearchTextResult {
 }
 
 /**
- * `/usr/bin/grep` のrecursive read-only subsetを構造化入力から生成します。
+ * `grep` のrecursive read-only subsetを構造化入力から生成します。
  *
  * @param input canonical rootを含む検証済み入力
  * @returns 固定executableとargv
@@ -46,10 +46,10 @@ export function buildGrepCommand(input: SearchTextInput): RemoteCommand {
 }
 
 const compressedGrepSettings = {
-  none: { executable: "/usr/bin/grep", defaultGlob: undefined },
-  gzip: { executable: "/usr/bin/zgrep", defaultGlob: "*.gz" },
-  bzip2: { executable: "/usr/bin/bzgrep", defaultGlob: "*.bz2" },
-  xz: { executable: "/usr/bin/xzgrep", defaultGlob: "*.xz" },
+  none: { executable: "grep", defaultGlob: undefined },
+  gzip: { executable: "zgrep", defaultGlob: "*.gz" },
+  bzip2: { executable: "bzgrep", defaultGlob: "*.bz2" },
+  xz: { executable: "xzgrep", defaultGlob: "*.xz" },
 } as const;
 
 /**
@@ -106,7 +106,7 @@ function buildFindGrepCommand(
   }
   args.push("--", input.query, "{}", "+");
 
-  return { executable: "/usr/bin/find", args };
+  return { executable: "find", args };
 }
 
 /**
