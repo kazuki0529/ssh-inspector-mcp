@@ -51,15 +51,26 @@ describe("CloudWatchCommandBuilder", () => {
     ]);
   });
 
-  it("31日超の時間範囲とquery方式の重複を拒否する", () => {
-    const common = {
+  it("31日超の時間範囲を許可する", () => {
+    const input = {
       region: "ap-northeast-1",
       startTime: "2026-01-01T00:00:00Z",
       endTime: "2026-03-01T00:00:00Z",
+      queries: [{ id: "m1", expression: "1" }],
+    };
+
+    expect(() => getMetricDataInputSchema.parse(input)).not.toThrow();
+  });
+
+  it("query方式の重複を拒否する", () => {
+    const input = {
+      region: "ap-northeast-1",
+      startTime: "2026-01-01T00:00:00Z",
+      endTime: "2026-01-02T00:00:00Z",
       queries: [{ id: "m1", expression: "1", metricStat: { metric: { namespace: "N", metricName: "M" }, period: 60, stat: "Average" } }],
     };
 
-    expect(() => getMetricDataInputSchema.parse(common)).toThrow();
+    expect(() => getMetricDataInputSchema.parse(input)).toThrow();
   });
 });
 

@@ -34,7 +34,7 @@ export function registerCloudWatchTools(server: McpServer, service: CloudWatchSe
   server.registerTool(
     "aws_cloudwatch_get_metric_data",
     {
-      description: "最大31日のCloudWatch metric dataをbounded queryで参照します。",
+      description: "CloudWatch metric dataをbounded queryで参照します。",
       inputSchema: getMetricDataInputSchema,
     },
     async (input) => executeTool(async () => service.getMetricData(input)),

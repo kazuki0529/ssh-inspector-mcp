@@ -38,7 +38,7 @@ export function registerCloudWatchLogsTools(
   server.registerTool(
     "aws_cloudwatch_logs_filter_log_events",
     {
-      description: "指定log groupのeventを最大24時間・100件で検索します。",
+      description: "指定log groupのeventを最大100件で検索します。",
       inputSchema: filterLogEventsInputSchema,
     },
     async (input) => executeTool(async () => service.filterLogEvents(input)),
@@ -46,7 +46,7 @@ export function registerCloudWatchLogsTools(
   server.registerTool(
     "aws_cloudwatch_logs_get_log_events",
     {
-      description: "指定した単一log streamからeventを最大24時間・100件取得します。",
+      description: "指定した単一log streamからeventを最大100件取得します。",
       inputSchema: getLogEventsInputSchema,
     },
     async (input) => executeTool(async () => service.getLogEvents(input)),

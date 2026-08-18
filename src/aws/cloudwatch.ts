@@ -80,11 +80,7 @@ export const getMetricDataInputSchema = z
   .strict()
   .refine((input) => new Date(input.startTime).getTime() < new Date(input.endTime).getTime(), {
     message: "startTimeはendTimeより前である必要があります",
-  })
-  .refine(
-    (input) => new Date(input.endTime).getTime() - new Date(input.startTime).getTime() <= 31 * 24 * 60 * 60 * 1_000,
-    { message: "metric dataの時間範囲は31日以内に制限してください" },
-  );
+  });
 
 /** describe-alarms入力型です。 */
 export type DescribeAlarmsInput = z.infer<typeof describeAlarmsInputSchema>;
