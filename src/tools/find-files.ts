@@ -31,7 +31,7 @@ export interface FindFilesResult {
 }
 
 /**
- * `/usr/bin/find` の安全な部分集合だけを構造化入力から生成します。
+ * `find` の安全な部分集合だけを構造化入力から生成します。
  *
  * @param input canonical rootを含む検証済み入力
  * @returns 固定executableとargv
@@ -64,7 +64,7 @@ export function buildFindCommand(input: FindFilesInput): RemoteCommand {
   }
   args.push("-print0");
 
-  return { executable: "/usr/bin/find", args };
+  return { executable: "find", args };
 }
 
 /**

@@ -1,18 +1,21 @@
-/** SSH先で実行を許可するabsolute executable一覧です。 */
+/** SSH先で実行を許可するexecutable一覧です。 */
 export const ALLOWED_EXECUTABLES = [
-  "/usr/bin/aws",
-  "/usr/bin/df",
-  "/usr/bin/find",
-  "/usr/bin/free",
-  "/usr/bin/grep",
-  "/usr/bin/ps",
-  "/usr/bin/rpm",
-  "/usr/bin/systemctl",
-  "/usr/bin/uname",
-  "/usr/bin/uptime",
+  "aws",
+  "bzgrep",
+  "df",
+  "find",
+  "free",
+  "grep",
+  "ps",
+  "rpm",
+  "systemctl",
+  "uname",
+  "uptime",
+  "xzgrep",
+  "zgrep",
 ] as const;
 
-/** 許可されたabsolute executable型です。 */
+/** 許可されたexecutable型です。 */
 export type AllowedExecutable = (typeof ALLOWED_EXECUTABLES)[number];
 
 /** rendererへ渡せる構造化commandです。 */

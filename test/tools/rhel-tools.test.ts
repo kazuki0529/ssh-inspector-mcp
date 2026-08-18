@@ -77,7 +77,7 @@ describe("RHEL command builders", () => {
         limit: 10,
       }),
     ).toEqual({
-      executable: "/usr/bin/find",
+      executable: "find",
       args: [
         "/var/log",
         "-maxdepth",
@@ -119,7 +119,7 @@ describe("RHEL command builders", () => {
     });
 
     expect(command).toEqual({
-      executable: "/usr/bin/find",
+      executable: "find",
       args: [
         "/var/log/app",
         "-maxdepth",
@@ -129,7 +129,7 @@ describe("RHEL command builders", () => {
         "-name",
         "*.log.gz",
         "-exec",
-        "/usr/bin/zgrep",
+        "zgrep",
         "--binary-files=without-match",
         "--line-number",
         "--with-filename",
@@ -145,10 +145,10 @@ describe("RHEL command builders", () => {
   });
 
   it.each([
-    ["none", "/usr/bin/grep"],
-    ["gzip", "/usr/bin/zgrep"],
-    ["bzip2", "/usr/bin/bzgrep"],
-    ["xz", "/usr/bin/xzgrep"],
+    ["none", "grep"],
+    ["gzip", "zgrep"],
+    ["bzip2", "bzgrep"],
+    ["xz", "xzgrep"],
   ] as const)("%s検索で固定executableだけを使う", (compression, executable) => {
     const command = buildGrepCommand({
       root: "/var/log/app",
@@ -159,7 +159,7 @@ describe("RHEL command builders", () => {
       limit: 10,
     });
 
-    expect(command.executable).toBe("/usr/bin/find");
+    expect(command.executable).toBe("find");
     expect(command.args).toContain(executable);
     expect(command.args.slice(-4)).toEqual(["--", "--include=*", "{}", "+"]);
   });
@@ -212,7 +212,7 @@ describe("RHEL tool input schemas", () => {
 
   it("system情報種別を固定templateへ変換する", () => {
     expect(buildSystemInfoCommand({ kind: "memory" })).toEqual({
-      executable: "/usr/bin/free",
+      executable: "free",
       args: ["-b"],
     });
   });

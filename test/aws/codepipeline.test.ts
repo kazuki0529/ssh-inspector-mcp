@@ -20,7 +20,7 @@ describe("CodePipelineCommandBuilder", () => {
       limit: 25,
     }));
 
-    expect(command.executable).toBe("/usr/bin/aws");
+    expect(command.executable).toBe("aws");
     expect(command.args.slice(0, 2)).toEqual(["codepipeline", "list-action-executions"]);
     expect(command.args).toContain("--no-paginate");
     const filterIndex = command.args.indexOf("--filter");

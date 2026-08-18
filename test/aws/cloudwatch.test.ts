@@ -86,7 +86,7 @@ describe("executeAwsJson", () => {
       })),
     };
 
-    await expect(executeAwsJson(runner, { executable: "/usr/bin/aws", args: [] })).rejects.toBeInstanceOf(
+    await expect(executeAwsJson(runner, { executable: "aws", args: [] })).rejects.toBeInstanceOf(
       AwsExecutionError,
     );
   });

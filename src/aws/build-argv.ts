@@ -47,7 +47,7 @@ const forbiddenParameters = new Set([
  * AWS CLIの共通安全optionを強制し、型付きparameterだけをargvへ変換します。
  *
  * @param input service・operation・region・parameter
- * @returns `/usr/bin/aws` 固定command
+ * @returns `aws` command
  */
 export function buildAwsCommand(input: BuildAwsCommandInput): RemoteCommand {
   if (!awsRegionPattern.test(input.region)) {
@@ -81,7 +81,7 @@ export function buildAwsCommand(input: BuildAwsCommandInput): RemoteCommand {
     appendParameter(args, name, value);
   }
 
-  return { executable: "/usr/bin/aws", args };
+  return { executable: "aws", args };
 }
 
 /**

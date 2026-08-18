@@ -9,21 +9,21 @@ import {
 describe("renderCommand", () => {
   it("shell metacharacterとsingle quoteを一つのargv値としてquoteする", () => {
     const command: RemoteCommand = {
-      executable: "/usr/bin/grep",
+      executable: "grep",
       args: ["-F", "--", "a'; rm -rf /; echo '", "/var/log/app"],
     };
 
     expect(renderCommand(command)).toBe(
-      "/usr/bin/grep '-F' '--' 'a'\\''; rm -rf /; echo '\\''' '/var/log/app'",
+      "grep '-F' '--' 'a'\\''; rm -rf /; echo '\\''' '/var/log/app'",
     );
   });
 
   it("改行とNULを含むargvを拒否する", () => {
     expect(() =>
-      renderCommand({ executable: "/usr/bin/find", args: ["/var/log\n/etc"] }),
+      renderCommand({ executable: "find", args: ["/var/log\n/etc"] }),
     ).toThrow(CommandPolicyError);
     expect(() =>
-      renderCommand({ executable: "/usr/bin/find", args: ["/var/log\0/etc"] }),
+      renderCommand({ executable: "find", args: ["/var/log\0/etc"] }),
     ).toThrow(CommandPolicyError);
   });
 

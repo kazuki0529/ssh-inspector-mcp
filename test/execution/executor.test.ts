@@ -30,14 +30,14 @@ describe("executeRemoteCommand", () => {
 
     const resultPromise = executeRemoteCommand(
       client,
-      { executable: "/usr/bin/uname", args: ["-a"] },
+      { executable: "uname", args: ["-a"] },
       5,
       1_000,
     );
     channel.write("abcdef");
     const result = await resultPromise;
 
-    expect(rendered).toBe("/usr/bin/uname '-a'");
+    expect(rendered).toBe("uname '-a'");
     expect(pty).toBe(false);
     expect(result.stdout).toBe("abcde");
     expect(result.truncated).toBe(true);
