@@ -46,7 +46,7 @@ describe("CloudWatchLogsCommandBuilder", () => {
 
     const command = builder.filterLogEvents(input);
 
-    expect(command.executable).toBe("/usr/bin/aws");
+    expect(command.executable).toBe("aws");
     expect(command.args.slice(0, 2)).toEqual(["logs", "filter-log-events"]);
     expect(command.args).toContain("/aws/lambda/application");
     expect(command.args).toContain(String(new Date("2026-08-09T00:00:00Z").getTime()));

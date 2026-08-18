@@ -18,7 +18,7 @@ describe("buildAwsCommand", () => {
     });
 
     expect(command).toEqual({
-      executable: "/usr/bin/aws",
+      executable: "aws",
       args: [
         "cloudwatch",
         "list-metrics",
