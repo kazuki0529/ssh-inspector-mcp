@@ -64,15 +64,7 @@ describe("CloudWatchLogsCommandBuilder", () => {
     ).toThrow();
   });
 
-  it("24時間超の検索とstream selectorの同時指定を拒否する", () => {
-    expect(() =>
-      filterLogEventsInputSchema.parse({
-        region: "ap-northeast-1",
-        logGroupName: "/aws/lambda/application",
-        startTime: "2026-08-08T00:00:00Z",
-        endTime: "2026-08-09T00:00:01Z",
-      }),
-    ).toThrow(/24時間/);
+  it("stream selectorの同時指定を拒否する", () => {
     expect(() =>
       filterLogEventsInputSchema.parse({
         region: "ap-northeast-1",
@@ -81,6 +73,17 @@ describe("CloudWatchLogsCommandBuilder", () => {
         logStreamNamePrefix: "stream-",
       }),
     ).toThrow(/同時指定/);
+  });
+
+  it("24時間超の検索範囲を許可する", () => {
+    expect(() =>
+      filterLogEventsInputSchema.parse({
+        region: "ap-northeast-1",
+        logGroupName: "/aws/lambda/application",
+        startTime: "2026-08-08T00:00:00Z",
+        endTime: "2026-08-09T00:00:01Z",
+      }),
+    ).not.toThrow();
   });
 
   it("stream prefix指定時にLastEventTime順を拒否する", () => {

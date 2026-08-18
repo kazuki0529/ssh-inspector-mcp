@@ -241,7 +241,7 @@ export class CloudWatchLogsService {
 }
 
 /**
- * event本文の検索範囲を最大24時間へ制限します。
+ * endTimeがstartTimeより後であることを検証します。
  *
  * @param input 任意の開始・終了時刻
  * @param context Zod検証context
@@ -257,8 +257,6 @@ function validateTimeRange(
   const duration = new Date(input.endTime).getTime() - new Date(input.startTime).getTime();
   if (duration <= 0) {
     context.addIssue({ code: "custom", path: ["endTime"], message: "endTimeはstartTimeより後である必要があります" });
-  } else if (duration > 24 * 60 * 60 * 1_000) {
-    context.addIssue({ code: "custom", path: ["endTime"], message: "log eventの時間範囲は24時間以内に制限してください" });
   }
 }
 
