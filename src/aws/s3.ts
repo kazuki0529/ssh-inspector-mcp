@@ -237,6 +237,7 @@ function assertTextContent(contentType: string | undefined, contentEncoding: str
     "application/xml",
     "application/yaml",
     "application/octet-stream",
+    "binary/octet-stream",
   ]).has(normalized ?? "");
 
   if (!allowed || contentEncoding !== undefined) {
