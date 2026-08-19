@@ -72,14 +72,32 @@ describe("S3Service", () => {
     expect(getCommand.args.at(-1)).toBe("/dev/stdout");
   });
 
-  it("binary content-typeをget-object前に拒否する", async () => {
-    const execute = vi.fn(() => Promise.resolve(result(JSON.stringify({ ContentLength: 5, ContentType: "application/octet-stream" }))));
+  it("application/octet-streamをSSE暗号化objectとして許可する", async () => {
+    const execute = vi.fn()
+      .mockResolvedValueOnce(result(JSON.stringify({ ContentLength: 5, ContentType: "application/octet-stream" })))
+      .mockResolvedValueOnce(result('{"Con'));
+    const service = new S3Service({ execute }, new S3CommandBuilder(), config);
+
+    const response = await service.getObjectText({
+      region: "ap-northeast-1",
+      bucket: "allowed-bucket",
+      key: "logs/file.json.enc",
+      startByte: 0,
+      maxBytes: 5,
+    });
+
+    expect(response).toEqual({ text: '{"Con', bytesRead: 5, truncated: false });
+    expect(execute).toHaveBeenCalledTimes(2);
+  });
+
+  it("image/pngなどの非text content-typeをget-object前に拒否する", async () => {
+    const execute = vi.fn(() => Promise.resolve(result(JSON.stringify({ ContentLength: 5, ContentType: "image/png" }))));
     const service = new S3Service({ execute }, new S3CommandBuilder(), config);
 
     await expect(service.getObjectText({
       region: "ap-northeast-1",
       bucket: "allowed-bucket",
-      key: "logs/file.bin",
+      key: "images/photo.png",
       startByte: 0,
       maxBytes: 5,
     })).rejects.toThrow(/text content-type/);
