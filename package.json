@@ -24,7 +24,7 @@
     "verify:mcp": "node scripts/verify-mcp.mjs"
   },
   "dependencies": {
-    "@modelcontextprotocol/server": "2.0.0",
+    "@modelcontextprotocol/server": "2.3.0",
     "ssh2": "1.17.0",
     "zod": "4.4.3"
   },
